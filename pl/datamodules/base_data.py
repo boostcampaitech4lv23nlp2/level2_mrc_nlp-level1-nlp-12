@@ -8,7 +8,7 @@ import torch
 import transformers
 from tqdm.auto import tqdm
 
-from utils.utils import *
+from input.code.pl.utils.util import *
 
 
 class Dataset(torch.utils.data.Dataset):
