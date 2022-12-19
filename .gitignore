@@ -198,3 +198,5 @@ pl/config/electra_label_yong.yaml
 pl/ensemble/
 pl/inference_results/
 pl/lightning_logs/
+
+workspace
