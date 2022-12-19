@@ -118,4 +118,4 @@ python inference.py --output_dir ./outputs/test_dataset/ --dataset_name ../data/
 
 2. 모델의 경우 `--overwrite_cache` 를 추가하지 않으면 같은 폴더에 저장되지 않습니다. 
 
-3. `./outputs/` 폴더 또한 `--overwrite_output_dir` 을 추가하지 않으면 같은 폴더에 저장되지 않습니다.# level2_mrc_nlp-level1-nlp-12
+3. `./outputs/` 폴더 또한 `--overwrite_output_dir` 을 추가하지 않으면 같은 폴더에 저장되지 않습니다.
