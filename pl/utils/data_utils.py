@@ -1,5 +1,3 @@
-# 여기에 data관련 utils 모아주세요
-# 나중에 augmentation도 여기에 넣을 예정입니다
 import pickle
 
 import numpy as np
@@ -368,7 +366,7 @@ def post_processing_function(examples, features, predictions, mode):
         elif mode=='eval':
             references = [
                 {"id": ex["id"], "answers": ex['answers']}
-                for ex in datasets["validation"]
+                for ex in examples
             ]
             return EvalPrediction(
                 predictions=formatted_predictions, label_ids=references

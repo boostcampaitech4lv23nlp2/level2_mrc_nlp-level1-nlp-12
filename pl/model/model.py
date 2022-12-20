@@ -30,6 +30,7 @@ class Model(pl.LightningModule):
         # Loss 계산을 위해 사용될 CE Loss를 호출합니다.
         self.loss_func = criterion_entrypoint(config.loss.loss_name)
         self.optimizer_name = config.optimizer.optimizer_name
+        
         self.eval_dataset = load_from_disk(config.path.train_path)['validation']
         self.predict_dataset = load_from_disk(config.path.test_path)['validation']
         
@@ -41,49 +42,48 @@ class Model(pl.LightningModule):
             start_positions=x['start_positions'],
             end_positions=x['end_positions']
         )
-        return x["logits"]
+        return x["start_logits"], x["end_logits"]
 
     def training_step(self, batch):
 
         start_logits, end_logits = self(batch)
+        s_position, e_position = batch['start_positions'], batch['end_positions']
 
-        l_s = self.loss_func(start_logits, batch['start_positions'])
-        l_e = self.loss_func(end_logits, batch['end_positions'])
+        l_s = self.loss_func(start_logits, s_position)
+        l_e = self.loss_func(end_logits, e_position)
+
         loss = (l_s+l_e) / 2
-        self.log("train", {"loss": loss})
+        self.log("train_loss", loss)
         
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x = batch
 
-        logits = self(x)
-        preds = post_processing_function(self.eval_dataset[batch_idx], batch, logits, 'eval')
+        start_logits, end_logits = self(batch)
+        prediction = (start_logits, end_logits)
+
+        preds = post_processing_function(self.eval_dataset[batch_idx], batch, prediction, 'eval')
         result = compute_metrics(preds)
-        self.log("val_em", result['exact_match'], on_step=True)
+        self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
-
-        return {"val_em": result['exact_match'], "val_f1": result['f1']}
- 
 
     def test_step(self, batch, batch_idx):
-        x = batch
-        logits= self(x)
-        preds = post_processing_function(self.eval_dataset[batch_idx], batch, logits, 'eval')
+
+        start_logits, end_logits = self(batch)
+        prediction = (start_logits, end_logits)
+
+        preds = post_processing_function(self.eval_dataset[batch_idx], batch, prediction, 'eval')
         result = compute_metrics(preds)
-        self.log("val_em", result['exact_match'], on_step=True)
-        self.log("val_f1", result['f1'])
+        self.log("test_em", result['exact_match'])
+        self.log("test_f1", result['f1'])
 
-        return {"val_em": result['exact_match'], "val_f1": result['f1']}
+    # def predict_step(self, batch, batch_idx):
 
-    def predict_step(self, batch, batch_idx):
-        x = batch
+    #     start_logits, end_logits = self(batch)
 
-        logits = self(x)
-        preds = post_processing_function(self.predict_dataset[batch_idx], batch, logits, 'predict')
+    #     preds = post_processing_function(self.predict_dataset[batch_idx], batch, logits, 'predict')
 
-        return preds
-    
+    #     return preds
 
     def configure_optimizers(self):
         opt_module = getattr(import_module("torch.optim"), self.optimizer_name)
