@@ -20,7 +20,7 @@ train:
 optimizer:
     learning_rate: 1e-5
     optimizer_name: AdamW
-    lr_weight_decay: True
+    lr_weight_decay: False
     lr_decay_step: 20
     lr_sch_use: False
     scheduler_name: constant_warmup # StepLR, ReduceLROnPlateau, CosineAnnealingLR, constant_warmup

@@ -19,7 +19,8 @@ class Dataset(torch.utils.data.Dataset):
         self.dataset = dataset
 
     def __getitem__(self, idx):
-        item = self.dataset[idx]
+        print(self.dataset[idx])
+        item = {key: torch.tensor(val) for key, val in self.dataset[idx].items()}
         return item
 
     def __len__(self):
@@ -56,41 +57,44 @@ class Dataloader(pl.LightningDataModule):
         if stage == "fit":
             # 학습 데이터을 호출
             total_data = load_from_disk(self.train_path)
-
-            train_data = total_data['train']
-            val_data = total_data['validation']
-            # tokenized_train = prepare_train_features(train_data, self.tokenizer)
-            # tokenized_val = prepare_validation_features(val_data, self.tokenizer)
-            tokenized_train = train_data.map(
+            tokenized_train = total_data.map(
             prepare_train_features,
             batched=True,
             num_proc=4,
             remove_columns=total_data['train'].column_names,
+            
         )
-            tokenized_val = val_data.map(
+            tokenized_val = total_data.map(
                 prepare_validation_features,
                 batched=True,
                 num_proc=4,
                 remove_columns=total_data['validation'].column_names)
 
-            self.train_dataset = Dataset(tokenized_train)
-            self.val_dataset = Dataset(tokenized_val)
+            # self.train_dataset = Dataset(tokenized_train['train'])
+            # self.val_dataset = Dataset(tokenized_val['validation'])
+            self.train_dataset = Dataset(tokenized_train['train'])
+            self.val_dataset = Dataset(tokenized_val['validation'])
 
         if stage == "test":
             # Test에 사용할 데이터를 호출 
             total_data = load_from_disk(self.train_path)
+            tokenized_val = total_data.map(
+                prepare_validation_features,
+                batched=True,
+                num_proc=4,
+                remove_columns=total_data['validation'].column_names)
 
-            train_data = total_data['train']
-            val_data = total_data['validation']
-
-            tokenized_val = prepare_validation_features(val_data, self.tokenizer)
-
-            self.test_dataset = tokenized_val
+            # self.test_dataset = Dataset(tokenized_val['validation'])
+            self.test_dataset = Dataset(tokenized_val['validation'])
 
         if stage == "predict":
             # Inference에 사용될 데이터를 호출
             p_data = load_from_disk(self.test_path)
-            tokenized_p = prepare_validation_features(p_data, self.tokenizer)
+            tokenized_p = p_data.map(
+                prepare_validation_features,
+                batched=True,
+                num_proc=4,
+                remove_columns=p_data['validation'].column_names)
 
             self.predict_dataset = tokenized_p
 
@@ -99,20 +103,20 @@ class Dataloader(pl.LightningDataModule):
             self.train_dataset,
             batch_size=self.batch_size,
             shuffle=self.shuffle,
-            num_workers=4,
+            num_workers=0,
         )
 
     def val_dataloader(self):
         return torch.utils.data.DataLoader(
-            self.val_dataset, batch_size=self.batch_size, num_workers=4
+            self.val_dataset, batch_size=self.batch_size, num_workers=0
         )
 
     def test_dataloader(self):
         return torch.utils.data.DataLoader(
-            self.test_dataset, batch_size=self.batch_size, num_workers=4
+            self.test_dataset, batch_size=self.batch_size, num_workers=0
         )
 
     def predict_dataloader(self):
         return torch.utils.data.DataLoader(
-            self.predict_dataset, batch_size=self.batch_size, num_workers=4
+            self.predict_dataset, batch_size=self.batch_size, num_workers=0
         )

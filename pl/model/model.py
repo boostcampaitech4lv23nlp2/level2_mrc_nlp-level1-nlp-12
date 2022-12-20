@@ -25,7 +25,7 @@ class Model(pl.LightningModule):
 
         # 사용할 모델을 호출합니다.
         self.plm = transformers.AutoModelForQuestionAnswering.from_pretrained(
-            pretrained_model_name_or_path=self.model_name, num_labels=2
+            pretrained_model_name_or_path=self.model_name
         )
         # Loss 계산을 위해 사용될 CE Loss를 호출합니다.
         self.loss_func = criterion_entrypoint(config.loss.loss_name)
@@ -57,7 +57,7 @@ class Model(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x = batch
 
-        logits= self(x)
+        logits = self(x)
         preds = post_processing_function(self.eval_dataset[batch_idx], batch, logits, 'eval')
         result = compute_metrics(preds)
         self.log("val_em", result['exact_match'], on_step=True)

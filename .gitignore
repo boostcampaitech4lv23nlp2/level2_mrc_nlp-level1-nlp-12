@@ -13,6 +13,7 @@ models
 outputs
 wandb
 nohup.out
+arrow_to_csv.ipynb
 # Distribution / packaging
 .Python
 build/
