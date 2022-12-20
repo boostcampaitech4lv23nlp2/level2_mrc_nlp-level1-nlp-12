@@ -1,0 +1,17 @@
+# pyproject.toml
+[tool.black]
+line-length = 120
+exclude = '''
+    .git,
+    .gitignore
+'''
+
+[tool.isort]
+profile = "black"                            # black과 호환
+atomic = true                                # 파일에 구문 오류가 포함된 경우 출력이 저장되도록 함(True)
+line_length = 120                            # 최대 길이 설정(black,flake와 동일한 값)
+lines_after_imports = 1                      # import 다음 줄의 빈 줄 수 정하기
+lines_between_types = 1                      # import와 direct(type) 사이의 줄 간격
+multi_line_output = 3
+skip = [".git",".gitignore"]                 # skip할 폴더
+py_version=38
