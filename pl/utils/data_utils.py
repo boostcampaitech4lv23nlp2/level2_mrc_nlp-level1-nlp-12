@@ -1,5 +1,3 @@
-# 여기에 data관련 utils 모아주세요
-# 나중에 augmentation도 여기에 넣을 예정입니다
 import pickle
 
 import numpy as np
