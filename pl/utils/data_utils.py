@@ -363,7 +363,7 @@ def post_processing_function(examples, features, predictions, mode):
         elif mode=='eval':
             references = [
                 {"id": ex["id"], "answers": ex['answers']}
-                for ex in datasets["validation"]
+                for ex in examples
             ]
             return EvalPrediction(
                 predictions=formatted_predictions, label_ids=references

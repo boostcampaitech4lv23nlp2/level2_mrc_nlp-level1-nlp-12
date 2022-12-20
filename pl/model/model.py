@@ -30,6 +30,7 @@ class Model(pl.LightningModule):
         # Loss 계산을 위해 사용될 CE Loss를 호출합니다.
         self.loss_func = criterion_entrypoint(config.loss.loss_name)
         self.optimizer_name = config.optimizer.optimizer_name
+        
         self.eval_dataset = load_from_disk(config.path.train_path)['validation']
         self.predict_dataset = load_from_disk(config.path.test_path)['validation']
         
@@ -59,34 +60,30 @@ class Model(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
 
         start_logits, end_logits = self(batch)
+        prediction = (start_logits, end_logits)
 
-        preds = post_processing_function(self.eval_dataset[batch_idx], batch, logits, 'eval')
+        preds = post_processing_function(self.eval_dataset[batch_idx], batch, prediction, 'eval')
         result = compute_metrics(preds)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
 
-        return {"start_logits":start_logits, "end_logits":end_logits}
-
-    def validation_epoch_end(self, outputs):
-
-        return super().validation_epoch_end(outputs)
-
     def test_step(self, batch, batch_idx):
 
         start_logits, end_logits = self(batch)
+        prediction = (start_logits, end_logits)
 
-        preds = post_processing_function(self.eval_dataset[batch_idx], batch, logits, 'eval')
+        preds = post_processing_function(self.eval_dataset[batch_idx], batch, prediction, 'eval')
         result = compute_metrics(preds)
         self.log("test_em", result['exact_match'])
         self.log("test_f1", result['f1'])
 
-    def predict_step(self, batch, batch_idx):
+    # def predict_step(self, batch, batch_idx):
 
-        start_logits, end_logits = self(batch)
+    #     start_logits, end_logits = self(batch)
 
-        preds = post_processing_function(self.predict_dataset[batch_idx], batch, logits, 'predict')
+    #     preds = post_processing_function(self.predict_dataset[batch_idx], batch, logits, 'predict')
 
-        return preds
+    #     return preds
 
     def configure_optimizers(self):
         opt_module = getattr(import_module("torch.optim"), self.optimizer_name)
