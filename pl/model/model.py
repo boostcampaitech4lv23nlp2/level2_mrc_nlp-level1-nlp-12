@@ -41,7 +41,7 @@ class Model(pl.LightningModule):
             start_positions=x['start_positions'],
             end_positions=x['end_positions']
         )
-        return x["logits"]
+        return x["start_logits"], x["end_logits"]
 
     def training_step(self, batch):
 
@@ -64,6 +64,12 @@ class Model(pl.LightningModule):
         result = compute_metrics(preds)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
+
+        return {"start_logits":start_logits, "end_logits":end_logits}
+
+    def validation_epoch_end(self, outputs):
+
+        return super().validation_epoch_end(outputs)
 
     def test_step(self, batch, batch_idx):
 
