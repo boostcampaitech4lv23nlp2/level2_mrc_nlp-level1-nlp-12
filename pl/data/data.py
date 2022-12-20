@@ -8,25 +8,22 @@ import torch
 import transformers
 from tqdm.auto import tqdm
 
+from utils.data_utils import *
 from utils.utils import *
-
+from datasets import load_from_disk
 
 class Dataset(torch.utils.data.Dataset):
     """Dataset 구성을 위한 Class"""
 
-    def __init__(self, pair_dataset, labels):
-        self.pair_dataset = pair_dataset
-        self.labels = labels
+    def __init__(self, dataset):
+        self.dataset = dataset
 
     def __getitem__(self, idx):
-        item = {
-            key: val[idx].clone().detach() for key, val in self.pair_dataset.items()
-        }
-        item["labels"] = torch.tensor(self.labels[idx])
+        item = self.dataset[idx]
         return item
 
     def __len__(self):
-        return len(self.labels)
+        return len(self.dataset)
 
 
 class Dataloader(pl.LightningDataModule):
@@ -58,39 +55,44 @@ class Dataloader(pl.LightningDataModule):
     def setup(self, stage="fit"):
         if stage == "fit":
             # 학습 데이터을 호출
-            total_data = load_data(self.train_path)
+            total_data = load_from_disk(self.train_path)
 
-            train_data = total_data.sample(frac=0.9, random_state=self.split_seed)
-            val_data = total_data.drop(train_data.index)
+            train_data = total_data['train']
+            val_data = total_data['validation']
+            # tokenized_train = prepare_train_features(train_data, self.tokenizer)
+            # tokenized_val = prepare_validation_features(val_data, self.tokenizer)
+            tokenized_train = train_data.map(
+            prepare_train_features,
+            batched=True,
+            num_proc=4,
+            remove_columns=total_data['train'].column_names,
+        )
+            tokenized_val = val_data.map(
+                prepare_validation_features,
+                batched=True,
+                num_proc=4,
+                remove_columns=total_data['validation'].column_names)
 
-            train_label = label_to_num(train_data["label"].values)
-            val_label = label_to_num(val_data["label"].values)
-
-            tokenized_train = tokenized_dataset(train_data, self.tokenizer)
-            tokenized_val = tokenized_dataset(val_data, self.tokenizer)
-
-            self.train_dataset = Dataset(tokenized_train, train_label)
-            self.val_dataset = Dataset(tokenized_val, val_label)
+            self.train_dataset = Dataset(tokenized_train)
+            self.val_dataset = Dataset(tokenized_val)
 
         if stage == "test":
-            # Test에 사용할 데이터를 호출
-            total_data = load_data(self.train_path)
+            # Test에 사용할 데이터를 호출 
+            total_data = load_from_disk(self.train_path)
 
-            train_data = total_data.sample(frac=0.9, random_state=self.split_seed)
-            val_data = total_data.drop(train_data.index)
+            train_data = total_data['train']
+            val_data = total_data['validation']
 
-            val_label = label_to_num(val_data["label"].values)
-            tokenized_val = tokenized_dataset(val_data, self.tokenizer)
+            tokenized_val = prepare_validation_features(val_data, self.tokenizer)
 
-            self.test_dataset = Dataset(tokenized_val, val_label)
+            self.test_dataset = tokenized_val
 
         if stage == "predict":
             # Inference에 사용될 데이터를 호출
-            p_data = load_data(self.test_path)
-            p_label = list(map(int, p_data["label"].values))
-            tokenized_p = tokenized_dataset(p_data, self.tokenizer)
+            p_data = load_from_disk(self.test_path)
+            tokenized_p = prepare_validation_features(p_data, self.tokenizer)
 
-            self.predict_dataset = Dataset(tokenized_p, p_label)
+            self.predict_dataset = tokenized_p
 
     def train_dataloader(self):
         return torch.utils.data.DataLoader(

@@ -1,6 +1,6 @@
 path:
-    train_path: ../../dataset/train/train.csv
-    test_path: ../../dataset/test/test_data.csv
+    train_path: /opt/ml/input/data/train_dataset/
+    test_path: /opt/ml/input/data/test_dataset/
 
 data:
     shuffle: True
@@ -33,6 +33,6 @@ fold:
     nums_folds: 5
 
 wandb:
-    wandb_username: rion_
+    wandb_username: daniel0801
     wandb_project: re_temp
     wandb_entity: re_et

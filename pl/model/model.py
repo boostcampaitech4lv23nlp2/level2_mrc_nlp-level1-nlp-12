@@ -1,15 +1,15 @@
 import sys
 from importlib import import_module
 
-sys.path.append("/opt/ml/input/code/pl")
+sys.path.append("/opt/ml/input/code/level2_mrc_nlp-level1-nlp-12/pl")
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import transformers
 
-from utils import (criterion_entrypoint, klue_re_auprc, klue_re_micro_f1,
-                   n_compute_metrics)
-
+from utils.utils import (criterion_entrypoint, compute_metrics)
+from utils.data_utils import *
+from datasets import load_from_disk
 
 class Model(pl.LightningModule):
     def __init__(self, config):
@@ -17,89 +17,73 @@ class Model(pl.LightningModule):
         self.save_hyperparameters()
 
         self.model_name = config.model.model_name
-        self.lr = config.train.learning_rate
-        self.lr_sch_use = config.train.lr_sch_use
-        self.lr_decay_step = config.train.lr_decay_step
-        self.scheduler_name = config.train.scheduler_name
-        self.lr_weight_decay = config.train.lr_weight_decay
+        self.lr = config.optimizer.learning_rate
+        self.lr_sch_use = config.optimizer.lr_sch_use
+        self.lr_decay_step = config.optimizer.lr_decay_step
+        self.scheduler_name = config.optimizer.scheduler_name
+        self.lr_weight_decay = config.optimizer.lr_weight_decay
 
         # 사용할 모델을 호출합니다.
-        self.plm = transformers.AutoModelForSequenceClassification.from_pretrained(
-            pretrained_model_name_or_path=self.model_name, num_labels=30
+        self.plm = transformers.AutoModelForQuestionAnswering.from_pretrained(
+            pretrained_model_name_or_path=self.model_name, num_labels=2
         )
         # Loss 계산을 위해 사용될 CE Loss를 호출합니다.
-        self.loss_func = criterion_entrypoint(config.train.loss_name)
-        self.optimizer_name = config.train.optimizer_name
-
+        self.loss_func = criterion_entrypoint(config.loss.loss_name)
+        self.optimizer_name = config.optimizer.optimizer_name
+        self.eval_dataset = load_from_disk(config.path.train_path)['validation']
+        self.predict_dataset = load_from_disk(config.path.test_path)['validation']
+        
     def forward(self, x):
         x = self.plm(
             input_ids=x["input_ids"],
             attention_mask=x["attention_mask"],
             token_type_ids=x["token_type_ids"],
+            start_positions=x['start_positions'],
+            end_positions=x['end_positions']
         )
         return x["logits"]
 
-    def training_step(self, batch, batch_idx):
-        x = batch
-        y = batch["labels"]
+    def training_step(self, batch):
 
-        logits = self(x)
-        loss = self.loss_func(logits, y.long())
+        start_logits, end_logits = self(batch)
 
-        f1, accuracy = n_compute_metrics(logits, y).values()
-        self.log("train", {"loss": loss, "f1": f1, "accuracy": accuracy})
-
+        l_s = self.loss_func(start_logits, batch['start_positions'])
+        l_e = self.loss_func(end_logits, batch['end_positions'])
+        loss = (l_s+l_e) / 2
+        self.log("train", {"loss": loss})
+        
         return loss
 
     def validation_step(self, batch, batch_idx):
         x = batch
-        y = batch["labels"]
 
-        logits = self(x)
-        loss = self.loss_func(logits, y.long())
+        logits= self(x)
+        preds = post_processing_function(self.eval_dataset[batch_idx], batch, logits, 'eval')
+        result = compute_metrics(preds)
+        self.log("val_em", result['exact_match'], on_step=True)
+        self.log("val_f1", result['f1'])
 
-        f1, accuracy = n_compute_metrics(logits, y).values()
-        self.log("val_loss", loss)
-        self.log("val_accuracy", accuracy)
-        self.log("val_f1", f1, on_step=True)
-
-        return {"logits": logits, "y": y}
-
-    def validation_epoch_end(self, outputs):
-        logits = torch.cat([x["logits"] for x in outputs])
-        y = torch.cat([x["y"] for x in outputs])
-
-        logits = logits.detach().cpu().numpy()
-        y = y.detach().cpu()
-
-        auprc = klue_re_auprc(logits, y)
-        self.log("val_auprc", auprc)
+        return {"val_em": result['exact_match'], "val_f1": result['f1']}
+ 
 
     def test_step(self, batch, batch_idx):
         x = batch
-        y = batch["labels"]
+        logits= self(x)
+        preds = post_processing_function(self.eval_dataset[batch_idx], batch, logits, 'eval')
+        result = compute_metrics(preds)
+        self.log("val_em", result['exact_match'], on_step=True)
+        self.log("val_f1", result['f1'])
 
-        logits = self(x)
-
-        f1, accuracy = n_compute_metrics(logits, y).values()
-        self.log("test_f1", f1)
-
-        return {"logits": logits, "y": y}
-
-    def test_epoch_end(self, outputs):
-        logits = torch.cat([x["logits"] for x in outputs])
-        y = torch.cat([x["y"] for x in outputs])
-
-        logits = logits.detach().cpu().numpy()
-        y = y.detach().cpu()
-
-        auprc = klue_re_auprc(logits, y)
-        self.log("test_auprc", auprc)
+        return {"val_em": result['exact_match'], "val_f1": result['f1']}
 
     def predict_step(self, batch, batch_idx):
-        logits = self(batch)
+        x = batch
 
-        return logits
+        logits = self(x)
+        preds = post_processing_function(self.predict_dataset[batch_idx], batch, logits, 'predict')
+
+        return preds
+    
 
     def configure_optimizers(self):
         opt_module = getattr(import_module("torch.optim"), self.optimizer_name)

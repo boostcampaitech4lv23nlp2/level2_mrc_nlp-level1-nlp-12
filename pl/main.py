@@ -33,14 +33,13 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, default="base_config")
     args, _ = parser.parse_known_args()
 
-    cfg = OmegaConf.load(f"/opt/ml/input/code/pl/config{args.config}.yaml")
-
+    cfg = OmegaConf.load(f"/opt/ml/input/code/level2_mrc_nlp-level1-nlp-12/pl/config/{args.config}.yaml")
     # os.environ["WANDB_API_KEY"] = wandb_dict[cfg.wandb.wandb_username]
     wandb.login(key=wandb_dict[cfg.wandb.wandb_username])
     model_name_ch = re.sub("/", "_", cfg.model.model_name)
     wandb_logger = WandbLogger(
         log_model="all",
-        name=f"{cfg.model.saved_name}_{cfg.train.batch_size}_{cfg.train.learning_rate}_{time_now}",
+        name=f"{cfg.model.saved_name}_{cfg.train.batch_size}_{cfg.optimizer.learning_rate}_{time_now}",
         project=cfg.wandb.wandb_project,
         entity=cfg.wandb.wandb_entity,
     )
@@ -63,7 +62,7 @@ if __name__ == "__main__":
 
     # Earlystopping
     # TODO: 변경점
-    earlystopping = EarlyStopping(monitor="val_f1", patience=3, mode="max")
+    earlystopping = EarlyStopping(monitor="val_em", patience=3, mode="max")
 
     # dataloader와 model을 생성합니다.
     dataloader = Dataloader(
