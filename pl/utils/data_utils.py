@@ -233,10 +233,10 @@ def postprocess_qa_predictions(
 
             # `n_best_size`보다 큰 start and end logits을 살펴봅니다.
             start_indexes = torch.argsort(start_logits, descending=True)[
-                -1 : -n_best_size - 1
+                0 : n_best_size + 1
             ].tolist()
 
-            end_indexes = torch.argsort(end_logits, descending=True)[-1 : -n_best_size - 1].tolist()
+            end_indexes = torch.argsort(end_logits, descending=True)[0 : n_best_size + 1].tolist()
 
             for start_index in start_indexes:
                 for end_index in end_indexes:
@@ -304,13 +304,13 @@ def postprocess_qa_predictions(
             )
 
         # 모든 점수의 소프트맥스를 계산합니다(we do it with numpy to stay independent from torch/tf in this file, using the LogSumExp trick).
-        scores = np.array([pred.pop("score") for pred in predictions])
-        exp_scores = np.exp(scores - np.max(scores))
-        probs = exp_scores / exp_scores.sum()
+        # scores = np.array([pred.pop("score") for pred in predictions])
+        # exp_scores = np.exp(scores - np.max(scores))
+        # probs = exp_scores / exp_scores.sum()
 
-        # 예측값에 확률을 포함합니다.
-        for prob, pred in zip(probs, predictions):
-            pred["probability"] = prob
+        # # 예측값에 확률을 포함합니다.
+        # for prob, pred in zip(probs, predictions):
+        #     pred["probability"] = prob
 
         # best prediction을 선택합니다.
         if not version_2_with_negative:
