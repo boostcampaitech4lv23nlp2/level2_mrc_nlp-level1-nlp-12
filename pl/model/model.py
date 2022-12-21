@@ -31,8 +31,8 @@ class Model(pl.LightningModule):
         self.loss_func = criterion_entrypoint(config.loss.loss_name)
         self.optimizer_name = config.optimizer.optimizer_name
         
-        self.eval_dataset = load_from_disk(config.path.train_path)['validation']
-        self.predict_dataset = load_from_disk(config.path.test_path)['validation']
+        self.eval_example = load_from_disk(config.path.train_path)['validation']
+        self.predict_example = load_from_disk(config.path.test_path)['validation']
         
     def forward(self, x):
         x = self.plm(
@@ -58,11 +58,21 @@ class Model(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         data, id = batch
         start_logits, end_logits = self(data)
-        prediction = (start_logits, end_logits)
-        #print(self.eval_dataset[batch_idx], data.keys())
-        preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
+
+        return {"data":data, "start_logits": start_logits, 'end_logits' : end_logits, "id": id}
+
+    def validation_epoch_end(self, outputs):
+        start_logits = torch.cat([x["start_logits"] for x in outputs])
+        end_logits = torch.cat([x["end_logits"] for x in outputs])
+        predictions = (start_logits, end_logits)
+
+        ids = [x['id'] for x in outputs]
+        id = []
+        for i in ids:
+            for j in i:
+                id.append(j)
+        preds = post_processing_function(id, predictions, 'eval')
         result = compute_metrics(preds)
-        print(preds.predictions, preds.label_ids)
         print(result)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
@@ -72,7 +82,14 @@ class Model(pl.LightningModule):
         start_logits, end_logits = self(data)
         prediction = (start_logits, end_logits)
 
-        preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
+        return {"prediction": prediction, "id": id}
+
+    def test_epoch_end(self, outputs):
+        prediction = torch.cat([x["prediction"] for x in outputs])
+        id = torch.cat([x["id"] for x in outputs])
+        data = torch.cat([x["data"] for x in outputs])
+        
+        preds = post_processing_function(self.eval_example, data, id, prediction, 'eval')
         result = compute_metrics(preds)
         self.log("test_em", result['exact_match'])
         self.log("test_f1", result['f1'])

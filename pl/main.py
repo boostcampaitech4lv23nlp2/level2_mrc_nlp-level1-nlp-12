@@ -55,7 +55,7 @@ if __name__ == "__main__":
         # TODO: 변경점
         dirpath=ck_dir_path,
         filename="{epoch}_{val_loss:.4f}",
-        monitor="val_f1",
+        monitor="val_em",
         save_top_k=1,
         mode="max",
     )

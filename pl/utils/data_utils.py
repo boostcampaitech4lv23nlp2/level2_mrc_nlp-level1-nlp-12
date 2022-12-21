@@ -287,7 +287,7 @@ def postprocess_qa_predictions(
             p["offsets"] == (0, 0) for p in predictions
         ):
             predictions.append(min_null_prediction)
-
+        #print(predictions)
         # offset을 사용하여 original context에서 answer text를 수집합니다.
         context = example["context"]
         for pred in predictions:
@@ -349,11 +349,25 @@ def postprocess_qa_predictions(
 
     return all_predictions
 
-def post_processing_function(examples, features, id, predictions, mode):
+def post_processing_function(id, predictions, mode):
         # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
+        if mode == 'eval':
+            examples = load_from_disk('/opt/ml/input/data/train_dataset/')['validation']
+            features = examples.map(
+                prepare_validation_features,
+                batched=True,
+                num_proc=4,
+                remove_columns=examples.column_names)
+        else:
+            examples = load_from_disk('/opt/ml/input/data/test_dataset/')['validation']
+            features = examples.map(
+                prepare_validation_features,
+                batched=True,
+                num_proc=4,
+                remove_columns=examples.column_names)
         predictions = postprocess_qa_predictions(
-            examples=examples,
-            features=features,
+            examples = examples,
+            features = features,
             id = id,
             predictions=predictions,
             max_answer_length=100,
