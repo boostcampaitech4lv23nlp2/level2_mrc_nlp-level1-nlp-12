@@ -11,8 +11,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from data.data import *
-from model.model import *
+from datamodule.base_data import *
+from models.base_model import *
 
 time_ = datetime.now() + timedelta(hours=9)
 time_now = time_.strftime("%m%d%H%M")
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, default="base_config")
     args, _ = parser.parse_known_args()
 
-    cfg = OmegaConf.load(f"/opt/ml/input/code/level2_mrc_nlp-level1-nlp-12/pl/config/{args.config}.yaml")
+    cfg = OmegaConf.load(f"/opt/ml/input/code/pl/config/{args.config}.yaml")
     # os.environ["WANDB_API_KEY"] = wandb_dict[cfg.wandb.wandb_username]
     wandb.login(key=wandb_dict[cfg.wandb.wandb_username])
     model_name_ch = re.sub("/", "_", cfg.model.model_name)
@@ -61,7 +61,6 @@ if __name__ == "__main__":
     )
 
     # Earlystopping
-    # TODO: 변경점
     earlystopping = EarlyStopping(monitor="val_em", patience=3, mode="max")
 
     # dataloader와 model을 생성합니다.
@@ -87,7 +86,7 @@ if __name__ == "__main__":
         deterministic=True,
         # limit_train_batches=0.15,  # use only 15% of training data
         # limit_val_batches = 0.01, # use only 1% of val data
-        # limit_train_batches=10    # use only 10 batches of training data
+        # limit_train_batches=0.01    # use only 10 batches of training data
     )
 
     trainer.fit(model=model, datamodule=dataloader)

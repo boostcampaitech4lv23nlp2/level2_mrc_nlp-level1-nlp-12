@@ -7,7 +7,7 @@ data:
     augmentation: # adea, bt 등등
     
 model:
-    model_name: klue/bert-base
+    model_name: klue/roberta-small
     saved_name: base
 
 train:
@@ -15,7 +15,7 @@ train:
     gpus: 1
     batch_size: 16
     max_epoch: 10
-    logging_step: 5
+    logging_step: 1
     
 optimizer:
     learning_rate: 1e-5

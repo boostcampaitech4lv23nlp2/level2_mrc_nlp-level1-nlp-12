@@ -1,44 +1,14 @@
-import pickle
-
-import numpy as np
-import pandas as pd
-import sklearn
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm.auto import tqdm
-from datasets import load_metric, load_from_disk
-import collections
-import json
+from datasets import load_metric
 import logging
-import os
-import random
-from typing import Any, Optional, Tuple
-from datasets import DatasetDict
-from transformers import PreTrainedTokenizerFast, TrainingArguments, is_torch_available
-from transformers.trainer_utils import get_last_checkpoint
 logger = logging.getLogger(__name__)
-
 
 def compute_metrics(pred):
     metric = load_metric("squad")
     return metric.compute(predictions=pred.predictions, references=pred.label_ids)
-
-
-def make_output(logits):
-    """
-    batch 단위의 logits을 풀고 prob와 pred를 통해 csv파일을 만듭니다.
-    """
-    logits = torch.cat([x for x in logits])
-
-    prob = F.softmax(logits, dim=-1).tolist()
-    pred = np.argmax(logits, axis=-1).tolist()
-
-    pred_a = num_to_label(pred)
-
-    output = pd.DataFrame({"id": 0, "pred_label": pred_a, "probs": prob})
-    output["id"] = range(0, len(output))
-    output.to_csv("./submission.csv", index=False)
 
 # def check_no_error(
 #     data_args: DataTrainingArguments,
@@ -104,21 +74,6 @@ class FocalLoss(nn.Module):
             weight=self.weight,
             reduction=self.reduction,
         )
-
-
-# class FocalLoss(nn.Module):
-#     def __init__(self, alpha=1, gamma=2):
-#         super(FocalLoss, self).__init__()
-#         self.alpha = alpha
-#         self.gamma = gamma
-
-#     def forward(self, outputs, targets):
-#         ce_loss = torch.nn.functional.cross_entropy(outputs, targets, reduction="none")
-#         pt = torch.exp(-ce_loss)
-#         focal_loss = (self.alpha * (1 - pt) ** self.gamma * ce_loss).mean()
-#         return focal_loss
-
-
 class LabelSmoothingLoss(nn.Module):
     def __init__(self, classes=3, smoothing=0.0, dim=-1):
         super(LabelSmoothingLoss, self).__init__()
@@ -168,7 +123,6 @@ _criterion_entrypoints = {
     "label_smoothing": LabelSmoothingLoss(),
     "f1": F1Loss(),
 }
-
 
 def criterion_entrypoint(criterion_name):
     return _criterion_entrypoints[criterion_name]
