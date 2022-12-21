@@ -177,6 +177,7 @@ def postprocess_qa_predictions(
         is_world_process_zero (:obj:`bool`, `optional`, defaults to :obj:`True`):
             이 프로세스가 main process인지 여부(logging/save를 수행해야 하는지 여부를 결정하는 데 사용됨)
     """
+    #print(predictions)
     assert (
         len(predictions) == 2
     ), "`predictions` should be a tuple with two elements (start_logits, end_logits)."
@@ -232,12 +233,13 @@ def postprocess_qa_predictions(
                 }
 
             # `n_best_size`보다 큰 start and end logits을 살펴봅니다.
+            #print(start_logits, end_logits)
             start_indexes = torch.argsort(start_logits, descending=True)[
-                -1 : -n_best_size - 1
+                0 : n_best_size +1
             ].tolist()
 
-            end_indexes = torch.argsort(end_logits, descending=True)[-1 : -n_best_size - 1].tolist()
-
+            end_indexes = torch.argsort(end_logits, descending=True)[0 : n_best_size].tolist()
+            #print(start_indexes, end_indexes)
             for start_index in start_indexes:
                 for end_index in end_indexes:
                     # out-of-scope answers는 고려하지 않습니다.
@@ -281,7 +283,7 @@ def postprocess_qa_predictions(
         predictions = sorted(
             prelim_predictions, key=lambda x: x["score"], reverse=True
         )[:n_best_size]
-
+        #print(predictions)
         # 낮은 점수로 인해 제거된 경우 minimum null prediction을 다시 추가합니다.
         if version_2_with_negative and not any(
             p["offsets"] == (0, 0) for p in predictions
@@ -304,13 +306,14 @@ def postprocess_qa_predictions(
             )
 
         # 모든 점수의 소프트맥스를 계산합니다(we do it with numpy to stay independent from torch/tf in this file, using the LogSumExp trick).
-        scores = np.array([pred.pop("score") for pred in predictions])
-        exp_scores = np.exp(scores - np.max(scores))
-        probs = exp_scores / exp_scores.sum()
 
-        # 예측값에 확률을 포함합니다.
-        for prob, pred in zip(probs, predictions):
-            pred["probability"] = prob
+        # scores = np.array([pred.pop("score").cpu() if type(pred)==torch.Tensor else pred.pop("score") for pred in predictions])
+        # exp_scores = np.exp(scores - np.max(scores))
+        # probs = exp_scores / exp_scores.sum()
+
+        # # 예측값에 확률을 포함합니다.
+        # for prob, pred in zip(probs, predictions):
+        #     pred["probability"] = prob
 
         # best prediction을 선택합니다.
         if not version_2_with_negative:

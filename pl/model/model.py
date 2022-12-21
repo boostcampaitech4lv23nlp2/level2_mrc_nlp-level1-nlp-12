@@ -40,13 +40,13 @@ class Model(pl.LightningModule):
             attention_mask=x["attention_mask"],
             # token_type_ids=x["token_type_ids"],
         )
-        return x["start_logits"], x["end_logits"]
+        return x['start_logits'], x['end_logits']
 
     def training_step(self, batch):
-
-        start_logits, end_logits = self(batch)
+        output = self(batch)
+        start_logits, end_logits = output
         s_position, e_position = batch['start_positions'], batch['end_positions']
-
+        
         l_s = self.loss_func(start_logits, s_position)
         l_e = self.loss_func(end_logits, e_position)
 
@@ -57,21 +57,24 @@ class Model(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         data, id = batch
-        start_logits, end_logits = self(data)
+        output = self(data)
+        start_logits, end_logits = output
+        # prediction = (start_logits.argmax(dim=-1), end_logits.argmax(dim=-1))
         prediction = (start_logits, end_logits)
-        #print(self.eval_dataset[batch_idx], data.keys())
+        # print(start_logits.shape)
+        # print(self.eval_dataset[batch_idx], data.keys())
         preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
         result = compute_metrics(preds)
-        print(preds.predictions, preds.label_ids)
-        print(result)
+        #print(preds.predictions, preds.label_ids)
+        #print(result)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
 
     def test_step(self, batch, batch_idx):
         data, id = batch
-        start_logits, end_logits = self(data)
+        start_logits, end_logits = self(data).split(1, dim=-1)
+        # prediction = (start_logits.argmax(dim=-1), end_logits.argmax(dim=-1))
         prediction = (start_logits, end_logits)
-
         preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
         result = compute_metrics(preds)
         self.log("test_em", result['exact_match'])
