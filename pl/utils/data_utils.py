@@ -130,15 +130,16 @@ def prepare_validation_features(examples):
             tokenized_examples["example_id"].append(examples["id"][sample_index])
 
             # Set to None the offset_mapping을 None으로 설정해서 token position이 context의 일부인지 쉽게 판별 할 수 있습니다.
-            tokenized_examples["offset_mapping"][i] = [
-                (o if sequence_ids[k] == context_index else 0)
-                for k, o in enumerate(tokenized_examples["offset_mapping"][i])
-            ]
+            # tokenized_examples["offset_mapping"][i] = [
+            #     (o if sequence_ids[k] == context_index else 0)
+            #     for k, o in enumerate(tokenized_examples["offset_mapping"][i])
+            # ]
         return tokenized_examples
 
 def postprocess_qa_predictions(
     examples,
     features,
+    id,
     predictions: Tuple[np.ndarray, np.ndarray],
     version_2_with_negative: bool = False,
     n_best_size: int = 20,
@@ -188,8 +189,8 @@ def postprocess_qa_predictions(
     # example과 mapping되는 feature 생성
     example_id_to_index = {k: i for i, k in enumerate(examples["id"])}
     features_per_example = collections.defaultdict(list)
-    for i, feature in enumerate(features):
-        features_per_example[example_id_to_index[feature["example_id"]]].append(i)
+    for i, feature in enumerate(id):
+        features_per_example[example_id_to_index[id["example_id"]]].append(i)
 
     # prediction, nbest에 해당하는 OrderedDict 생성합니다.
     all_predictions = collections.OrderedDict()
@@ -348,7 +349,7 @@ def postprocess_qa_predictions(
 
     return all_predictions
 
-def post_processing_function(examples, features, predictions, mode):
+def post_processing_function(examples, features, id, predictions, mode):
         # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
         predictions = postprocess_qa_predictions(
             examples=examples,

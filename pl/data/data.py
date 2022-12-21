@@ -12,21 +12,38 @@ from utils.data_utils import *
 from utils.utils import *
 from datasets import load_from_disk
 
-class Dataset(torch.utils.data.Dataset):
+class Train_Dataset(torch.utils.data.Dataset):
     """Dataset 구성을 위한 Class"""
 
     def __init__(self, dataset):
         self.dataset = dataset
 
     def __getitem__(self, idx):
-        print(self.dataset[idx])
+        #print(self.dataset[idx])
         item = {key: torch.tensor(val) for key, val in self.dataset[idx].items()}
         return item
 
     def __len__(self):
         return len(self.dataset)
 
+class Val_Dataset(torch.utils.data.Dataset):
+    """Dataset 구성을 위한 Class"""
 
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __getitem__(self, idx):
+        #print(self.dataset[idx])
+        item = {
+            'input_ids' : torch.tensor(self.dataset[idx]['input_ids']),
+            'attention_mask' : torch.tensor(self.dataset[idx]['attention_mask']),
+            'offset_mapping' : torch.tensor(self.dataset[idx]['offset_mapping'])
+        }
+        id = self.dataset[idx]['example_id']
+        return item, id
+
+    def __len__(self):
+        return len(self.dataset)
 class Dataloader(pl.LightningDataModule):
     """ 
     Trainer에 들어갈 데이터셋을 호출
@@ -72,8 +89,8 @@ class Dataloader(pl.LightningDataModule):
 
             # self.train_dataset = Dataset(tokenized_train['train'])
             # self.val_dataset = Dataset(tokenized_val['validation'])
-            self.train_dataset = Dataset(tokenized_train['train'])
-            self.val_dataset = Dataset(tokenized_val['validation'])
+            self.train_dataset = Train_Dataset(tokenized_train['train'])
+            self.val_dataset = Val_Dataset(tokenized_val['validation'])
 
         if stage == "test":
             # Test에 사용할 데이터를 호출 
@@ -85,7 +102,7 @@ class Dataloader(pl.LightningDataModule):
                 remove_columns=total_data['validation'].column_names)
 
             # self.test_dataset = Dataset(tokenized_val['validation'])
-            self.test_dataset = Dataset(tokenized_val['validation'])
+            self.test_dataset = Val_Dataset(tokenized_val['validation'])
 
         if stage == "predict":
             # Inference에 사용될 데이터를 호출
