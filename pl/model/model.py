@@ -43,8 +43,7 @@ class Model(pl.LightningModule):
         return x['start_logits'], x['end_logits']
 
     def training_step(self, batch):
-        output = self(batch)
-        start_logits, end_logits = output
+        start_logits, end_logits = self(batch)
         s_position, e_position = batch['start_positions'], batch['end_positions']
         
         l_s = self.loss_func(start_logits, s_position)
@@ -56,14 +55,14 @@ class Model(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        output = self(batch)
-        start_logits, end_logits = output
+        data, id = batch
+        start_logits, end_logits = self(data)
         # prediction = (start_logits.argmax(dim=-1), end_logits.argmax(dim=-1))
-        example = {idx : item for idx, item in enumerate(self.eval_dataset)  if self.eval_dataset[idx]['id'] in batch['id']} 
+        # example = [self.eval_dataset[idx] for idx in range(len(self.eval_dataset))  if self.eval_dataset[idx]['id'] in batch['id']] 
         prediction = (start_logits, end_logits)
         #print(start_logits.shape)
         # print(self.eval_dataset[batch_idx], data.keys())
-        preds = post_processing_function(example, batch, batch['id'], prediction, 'eval')
+        preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
         result = compute_metrics(preds)
         print(preds.predictions)
         #print(result)

@@ -100,7 +100,7 @@ def prepare_train_features(examples):
 def prepare_validation_features(examples):
         # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
         # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
-        tokenizer = transformers.AutoTokenizer.from_pretrained('klue/bert-base')
+        tokenizer = transformers.AutoTokenizer.from_pretrained('klue/robert-small')
         tokenized_examples = tokenizer(
             examples['question'],
             examples['context'],
@@ -222,7 +222,7 @@ def postprocess_qa_predictions(
             # minimum null prediction을 업데이트 합니다.
             feature_null_score = start_logits[0] + end_logits[0]
             if (
-                min_null_prediction is 0
+                min_null_prediction == 0
                 or min_null_prediction["score"] > feature_null_score
             ):
                 min_null_prediction = {
