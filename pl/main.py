@@ -33,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, default="base_config")
     args, _ = parser.parse_known_args()
 
-    cfg = OmegaConf.load(f"/opt/ml/input/code/level2_mrc_nlp-level1-nlp-12/pl/config/{args.config}.yaml")
+    cfg = OmegaConf.load(f"/opt/ml/input/code/pl/config/{args.config}.yaml")
     # os.environ["WANDB_API_KEY"] = wandb_dict[cfg.wandb.wandb_username]
     wandb.login(key=wandb_dict[cfg.wandb.wandb_username])
     model_name_ch = re.sub("/", "_", cfg.model.model_name)
@@ -54,8 +54,8 @@ if __name__ == "__main__":
     checkpoint_callback = ModelCheckpoint(
         # TODO: 변경점
         dirpath=ck_dir_path,
-        filename="{epoch}_{val_loss:.4f}",
-        monitor="val_f1",
+        filename="{epoch}_{val_em:.4f}",
+        monitor="val_em",
         save_top_k=1,
         mode="max",
     )
