@@ -246,8 +246,8 @@ def postprocess_qa_predictions(
                     if (
                         start_index >= len(offset_mapping)
                         or end_index >= len(offset_mapping)
-                        or offset_mapping[start_index] is 0
-                        or offset_mapping[end_index] is 0
+                        or offset_mapping[start_index] == 0
+                        or offset_mapping[end_index] == 0
                     ):
                         continue
                     # 길이가 < 0 또는 > max_answer_length인 answer도 고려하지 않습니다.

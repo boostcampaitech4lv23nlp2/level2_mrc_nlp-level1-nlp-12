@@ -56,26 +56,25 @@ class Model(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        data, id = batch
-        output = self(data)
+        output = self(batch)
         start_logits, end_logits = output
         # prediction = (start_logits.argmax(dim=-1), end_logits.argmax(dim=-1))
+        example = {idx : item for idx, item in enumerate(self.eval_dataset)  if self.eval_dataset[idx]['id'] in batch['id']} 
         prediction = (start_logits, end_logits)
-        # print(start_logits.shape)
+        #print(start_logits.shape)
         # print(self.eval_dataset[batch_idx], data.keys())
-        preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
+        preds = post_processing_function(example, batch, batch['id'], prediction, 'eval')
         result = compute_metrics(preds)
-        #print(preds.predictions, preds.label_ids)
+        print(preds.predictions)
         #print(result)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
 
     def test_step(self, batch, batch_idx):
-        data, id = batch
-        start_logits, end_logits = self(data).split(1, dim=-1)
+        start_logits, end_logits = self(batch)
         # prediction = (start_logits.argmax(dim=-1), end_logits.argmax(dim=-1))
         prediction = (start_logits, end_logits)
-        preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
+        preds = post_processing_function(self.eval_dataset, batch, batch['id'], prediction, 'eval')
         result = compute_metrics(preds)
         self.log("test_em", result['exact_match'])
         self.log("test_f1", result['f1'])
