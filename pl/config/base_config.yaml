@@ -14,7 +14,7 @@ train:
     seed: 42
     gpus: 1
     batch_size: 16
-    max_epoch: 1
+    max_epoch: 10
     logging_step: 5
     
 optimizer:

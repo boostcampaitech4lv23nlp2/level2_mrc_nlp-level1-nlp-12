@@ -59,18 +59,20 @@ class Model(pl.LightningModule):
         data, id = batch
         start_logits, end_logits = self(data)
         prediction = (start_logits, end_logits)
-
-        preds = post_processing_function(self.eval_dataset[batch_idx], data, id, prediction, 'eval')
+        #print(self.eval_dataset[batch_idx], data.keys())
+        preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
         result = compute_metrics(preds)
+        print(preds.predictions, preds.label_ids)
+        print(result)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
 
     def test_step(self, batch, batch_idx):
         data, id = batch
-        start_logits, end_logits = self(batch)
+        start_logits, end_logits = self(data)
         prediction = (start_logits, end_logits)
 
-        preds = post_processing_function(self.eval_dataset[batch_idx], data, id, prediction, 'eval')
+        preds = post_processing_function(self.eval_dataset, data, id, prediction, 'eval')
         result = compute_metrics(preds)
         self.log("test_em", result['exact_match'])
         self.log("test_f1", result['f1'])

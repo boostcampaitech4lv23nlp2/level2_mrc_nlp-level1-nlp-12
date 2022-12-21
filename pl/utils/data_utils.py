@@ -182,15 +182,15 @@ def postprocess_qa_predictions(
     ), "`predictions` should be a tuple with two elements (start_logits, end_logits)."
     all_start_logits, all_end_logits = predictions
 
-    assert len(predictions[0]) == len(
-        features
-    ), f"Got {len(predictions[0])} predictions and {len(features)} features."
+    # assert len(predictions[0]) == len(
+    #     features
+    # ), print(predictions[0], features)#f"Got {len(predictions[0])} predictions and {len(features)} features."
 
     # example과 mapping되는 feature 생성
     example_id_to_index = {k: i for i, k in enumerate(examples["id"])}
     features_per_example = collections.defaultdict(list)
     for i, feature in enumerate(id):
-        features_per_example[example_id_to_index[id["example_id"]]].append(i)
+        features_per_example[example_id_to_index[feature]].append(i)
 
     # prediction, nbest에 해당하는 OrderedDict 생성합니다.
     all_predictions = collections.OrderedDict()
@@ -212,11 +212,11 @@ def postprocess_qa_predictions(
             start_logits = all_start_logits[feature_index]
             end_logits = all_end_logits[feature_index]
             # logit과 original context의 logit을 mapping합니다.
-            offset_mapping = features[feature_index]["offset_mapping"]
+            offset_mapping = features["offset_mapping"][feature_index]
             # Optional : `token_is_max_context`, 제공되는 경우 현재 기능에서 사용할 수 있는 max context가 없는 answer를 제거합니다
-            token_is_max_context = features[feature_index].get(
-                "token_is_max_context", 0
-            )
+            # token_is_max_context = features[feature_index].get(
+            #     "token_is_max_context", 0
+            # )
 
             # minimum null prediction을 업데이트 합니다.
             feature_null_score = start_logits[0] + end_logits[0]
@@ -232,11 +232,11 @@ def postprocess_qa_predictions(
                 }
 
             # `n_best_size`보다 큰 start and end logits을 살펴봅니다.
-            start_indexes = np.argsort(start_logits)[
-                -1 : -n_best_size - 1 : -1
+            start_indexes = torch.argsort(start_logits, descending=True)[
+                -1 : -n_best_size - 1
             ].tolist()
 
-            end_indexes = np.argsort(end_logits)[-1 : -n_best_size - 1 : -1].tolist()
+            end_indexes = torch.argsort(end_logits, descending=True)[-1 : -n_best_size - 1].tolist()
 
             for start_index in start_indexes:
                 for end_index in end_indexes:
@@ -255,11 +255,11 @@ def postprocess_qa_predictions(
                     ):
                         continue
                     # 최대 context가 없는 answer도 고려하지 않습니다.
-                    if (
-                        token_is_max_context is not 0
-                        and not token_is_max_context.get(str(start_index), False)
-                    ):
-                        continue
+                    # if (
+                    #     token_is_max_context is not 0
+                    #     and not token_is_max_context.get(str(start_index), False)
+                    # ):
+                    #     continue
                     prelim_predictions.append(
                         {
                             "offsets": (
@@ -354,6 +354,7 @@ def post_processing_function(examples, features, id, predictions, mode):
         predictions = postprocess_qa_predictions(
             examples=examples,
             features=features,
+            id = id,
             predictions=predictions,
             max_answer_length=100,
         )
