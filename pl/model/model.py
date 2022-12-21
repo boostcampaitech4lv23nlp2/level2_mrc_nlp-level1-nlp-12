@@ -85,14 +85,20 @@ class Model(pl.LightningModule):
         return {"prediction": prediction, "id": id}
 
     def test_epoch_end(self, outputs):
-        prediction = torch.cat([x["prediction"] for x in outputs])
-        id = torch.cat([x["id"] for x in outputs])
-        data = torch.cat([x["data"] for x in outputs])
-        
-        preds = post_processing_function(self.eval_example, data, id, prediction, 'eval')
+        start_logits = torch.cat([x["start_logits"] for x in outputs])
+        end_logits = torch.cat([x["end_logits"] for x in outputs])
+        predictions = (start_logits, end_logits)
+
+        ids = [x['id'] for x in outputs]
+        id = []
+        for i in ids:
+            for j in i:
+                id.append(j)
+        preds = post_processing_function(id, predictions, 'eval')
         result = compute_metrics(preds)
-        self.log("test_em", result['exact_match'])
-        self.log("test_f1", result['f1'])
+        print(result)
+        self.log("val_em", result['exact_match'])
+        self.log("val_f1", result['f1'])
 
     # def predict_step(self, batch, batch_idx):
 
