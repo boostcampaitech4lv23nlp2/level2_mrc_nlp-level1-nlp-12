@@ -46,15 +46,14 @@ if __name__ == "__main__":
 
     pl.seed_everything(cfg.train.seed, workers=True)
 
-    ck_dir_path = f"/opt/ml/code/pl/checkpoint/{model_name_ch}"
+    ck_dir_path = f"/opt/ml/input/code/pl/checkpoint/{model_name_ch}"
     if not os.path.exists(ck_dir_path):
         os.makedirs(ck_dir_path)
 
     # Checkpoint
     checkpoint_callback = ModelCheckpoint(
-        # TODO: 변경점
         dirpath=ck_dir_path,
-        filename="{epoch}_{val_loss:.4f}",
+        filename="{epoch}_{val_em:.2f}",
         monitor="val_em",
         save_top_k=1,
         mode="max",

@@ -2,6 +2,8 @@ import sys
 from importlib import import_module
 
 sys.path.append("/opt/ml/input/code/pl")
+
+from itertools import chain
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -70,19 +72,15 @@ class Model(pl.LightningModule):
         predictions = (start_logits, end_logits)
 
         ids = [x['id'] for x in outputs]
-        id = []
-        for i in ids:
-            for j in i:
-                id.append(j)
+        id = list(chain(*ids))
+        
         preds = post_processing_function(id, predictions, self.tokenizer, 'eval')
         result = compute_metrics(preds)
-        print(result)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
 
     def test_step(self, batch, batch_idx):
         data, id = batch
-        #data, id = batch['item'], batch['id']
         start_logits, end_logits = self(data)
         prediction = (start_logits, end_logits)
 
@@ -94,13 +92,10 @@ class Model(pl.LightningModule):
         predictions = (start_logits, end_logits)
 
         ids = [x['id'] for x in outputs]
-        id = []
-        for i in ids:
-            for j in i:
-                id.append(j)
+        id = list(chain(*ids))
+
         preds = post_processing_function(id, predictions, self.tokenizer, 'eval')
         result = compute_metrics(preds)
-        print(result)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
 
@@ -123,8 +118,7 @@ class Model(pl.LightningModule):
         else:
             optimizer = opt_module(
                 filter(lambda p: p.requires_grad, self.parameters()),
-                lr=self.lr,
-                # weight_decay=5e-4
+                lr=self.lr
             )
         if self.lr_sch_use:
             t_total = 2030 * 7  # train_dataloader len, epochs

@@ -34,7 +34,6 @@ class Val_Dataset(torch.utils.data.Dataset):
         self.dataset = dataset
 
     def __getitem__(self, idx):
-        #print(self.dataset[idx])
         item = {
             'input_ids' : torch.tensor(self.dataset[idx]['input_ids']),
             'attention_mask' : torch.tensor(self.dataset[idx]['attention_mask']),
@@ -43,7 +42,6 @@ class Val_Dataset(torch.utils.data.Dataset):
         id = self.dataset[idx]['example_id']
         
         return item, id
-        # return {"item":item, "id":id}
 
     def __len__(self):
         return len(self.dataset)
@@ -73,9 +71,6 @@ class Dataloader(pl.LightningDataModule):
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             model_name, max_length=200
         )
-
-        # self.data_collator = transformers.DataCollatorWithPadding(
-        # tokenizer=self.tokenizer, pad_to_multiple_of=8)
 
     def setup(self, stage="fit"):
         if stage == "fit":

@@ -19,6 +19,7 @@ def prepare_train_features(examples,tokenizer):
             return_overflowing_tokens=True,
             return_offsets_mapping=True,
             return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
+            padding="max_length"
         )
 
         # 길이가 긴 context가 등장할 경우 truncate를 진행해야하므로, 해당 데이터셋을 찾을 수 있도록 mapping 가능한 값이 필요합니다.
@@ -169,8 +170,8 @@ def postprocess_qa_predictions(
 
     # assert len(predictions[0]) == len(
     #     features
-    # ), print(predictions[0], features)#f"Got {len(predictions[0])} predictions and {len(features)} features."
-
+    # ), print(f"Got {len(predictions[0])} predictions and {len(features)} features.")
+    #print(predictions[0], features)
     # example과 mapping되는 feature 생성
     example_id_to_index = {k: i for i, k in enumerate(examples["id"])}
     features_per_example = collections.defaultdict(list)
@@ -272,7 +273,7 @@ def postprocess_qa_predictions(
             p["offsets"] == (0, 0) for p in predictions
         ):
             predictions.append(min_null_prediction)
-        #print(predictions)
+        
         # offset을 사용하여 original context에서 answer text를 수집합니다.
         context = example["context"]
         for pred in predictions:
