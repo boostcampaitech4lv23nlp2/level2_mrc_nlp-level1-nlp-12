@@ -19,7 +19,6 @@ class Train_Dataset(torch.utils.data.Dataset):
         self.dataset = dataset
 
     def __getitem__(self, idx):
-        #print(self.dataset[idx])
         item = {key: torch.tensor(val) for key, val in self.dataset[idx].items()}
         return item
 
@@ -33,7 +32,6 @@ class Val_Dataset(torch.utils.data.Dataset):
         self.dataset = dataset
 
     def __getitem__(self, idx):
-        #print(self.dataset[idx])
         item = {
             'input_ids' : torch.tensor(self.dataset[idx]['input_ids']),
             'attention_mask' : torch.tensor(self.dataset[idx]['attention_mask']),
