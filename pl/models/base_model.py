@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 import transformers
 
-from utils.utils import (criterion_entrypoint, compute_metrics)
+from utils.util import (criterion_entrypoint, compute_metrics)
 from utils.data_utils import *
 from datasets import load_from_disk
 

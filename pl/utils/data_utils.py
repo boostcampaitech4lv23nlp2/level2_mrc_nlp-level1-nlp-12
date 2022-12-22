@@ -1,23 +1,11 @@
-import pickle
-
 import numpy as np
-import pandas as pd
-import sklearn
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from tqdm.auto import tqdm
-from datasets import load_metric, load_from_disk
+from datasets import load_from_disk
 import collections
-import json
-import logging
-import os
-import random
-from typing import Any, Optional, Tuple
-from datasets import DatasetDict
+from typing import Any,Tuple
 import transformers
-from transformers import PreTrainedTokenizerFast, TrainingArguments, is_torch_available, EvalPrediction
-from transformers.trainer_utils import get_last_checkpoint
+from transformers import EvalPrediction
 
 def prepare_train_features(examples):
         # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
@@ -32,7 +20,6 @@ def prepare_train_features(examples):
             return_overflowing_tokens=True,
             return_offsets_mapping=True,
             return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
-            
         )
 
         # 길이가 긴 context가 등장할 경우 truncate를 진행해야하므로, 해당 데이터셋을 찾을 수 있도록 mapping 가능한 값이 필요합니다.
@@ -221,7 +208,7 @@ def postprocess_qa_predictions(
             # minimum null prediction을 업데이트 합니다.
             feature_null_score = start_logits[0] + end_logits[0]
             if (
-                min_null_prediction is 0
+                min_null_prediction == 0
                 or min_null_prediction["score"] > feature_null_score
             ):
                 min_null_prediction = {
@@ -365,6 +352,7 @@ def post_processing_function(id, predictions, mode):
                 batched=True,
                 num_proc=4,
                 remove_columns=examples.column_names)
+                
         predictions = postprocess_qa_predictions(
             examples = examples,
             features = features,

@@ -9,7 +9,7 @@ import transformers
 from tqdm.auto import tqdm
 
 from utils.data_utils import *
-from utils.utils import *
+from utils.util import *
 from datasets import load_from_disk
 
 class Train_Dataset(torch.utils.data.Dataset):
@@ -78,14 +78,14 @@ class Dataloader(pl.LightningDataModule):
             prepare_train_features,
             batched=True,
             num_proc=4,
-            remove_columns=total_data['train'].column_names,
-            
+            remove_columns=total_data['train'].column_names
         )
             tokenized_val = total_data.map(
                 prepare_validation_features,
                 batched=True,
                 num_proc=4,
-                remove_columns=total_data['validation'].column_names)
+                remove_columns=total_data['validation'].column_names,
+                )
 
             # self.train_dataset = Dataset(tokenized_train['train'])
             # self.val_dataset = Dataset(tokenized_val['validation'])
@@ -99,7 +99,9 @@ class Dataloader(pl.LightningDataModule):
                 prepare_validation_features,
                 batched=True,
                 num_proc=4,
-                remove_columns=total_data['validation'].column_names)
+                remove_columns=total_data['validation'].column_names,
+                fn_kwargs={"tokenizer":self.tokenizer}
+                )
 
             # self.test_dataset = Dataset(tokenized_val['validation'])
             self.test_dataset = Val_Dataset(tokenized_val['validation'])
@@ -111,7 +113,8 @@ class Dataloader(pl.LightningDataModule):
                 prepare_validation_features,
                 batched=True,
                 num_proc=4,
-                remove_columns=p_data['validation'].column_names)
+                remove_columns=p_data['validation'].column_names,
+                )
 
             self.predict_dataset = tokenized_p
 
