@@ -1,0 +1,45 @@
+path:
+    train_path: /opt/ml/input/data/train_dataset/
+    test_path: /opt/ml/input/data/test_dataset/
+
+data:
+    shuffle: True
+    augmentation: # adea, bt 등등
+    
+model:
+    model_name: klue/roberta-small
+    saved_name: base
+
+train:
+    seed: 42
+    gpus: 1
+    batch_size: 16
+    max_epoch: 10
+    logging_step: 1
+    
+optimizer:
+    learning_rate: 1e-5
+    optimizer_name: AdamW
+    lr_weight_decay: False
+    lr_decay_step: 20
+    lr_sch_use: False
+    scheduler_name: constant_warmup # StepLR, ReduceLROnPlateau, CosineAnnealingLR, constant_warmup
+
+loss:
+    loss_name: CrossEntropy # CrossEntropy, focal, label_smoothing, f1
+
+fold:
+    fold: False
+    nums_folds: 5
+
+sweep:
+    method: asdf
+    lr_min: asdf
+    lr_max: asdf
+    name: asdf
+    count: asdf
+
+wandb:
+    wandb_username: daniel0801
+    wandb_project: re_temp
+    wandb_entity: re_et
