@@ -98,7 +98,6 @@ class Dataloader(pl.LightningDataModule):
                 batched=True,
                 num_proc=4,
                 remove_columns=total_data['validation'].column_names,
-                fn_kwargs={"tokenizer":self.tokenizer}
                 )
 
             # self.test_dataset = Dataset(tokenized_val['validation'])
