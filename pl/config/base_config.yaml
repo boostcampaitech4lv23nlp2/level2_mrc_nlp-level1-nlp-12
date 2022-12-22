@@ -36,3 +36,8 @@ wandb:
     wandb_username: daniel0801
     wandb_project: re_temp
     wandb_entity: re_et
+
+sweep:
+    method: bayes
+    lr_min: 1e-5
+    lr_max: 5e-5

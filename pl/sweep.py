@@ -53,7 +53,7 @@ if __name__ == "__main__":
             },
         
     },
-    'name' : cfg.sweep.name,
+    'name' : cfg.model.model_name,
     'metric':{'name':'val_em', 'goal':'maximize'},
     "entity" : cfg.wandb.wandb_entity,
     'project' : cfg.wandb.wandb_project
