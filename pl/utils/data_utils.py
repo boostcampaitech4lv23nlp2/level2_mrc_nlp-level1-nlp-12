@@ -1,126 +1,130 @@
+import collections
+from typing import Any, Tuple
+
 import numpy as np
 import torch
-from tqdm.auto import tqdm
-from datasets import load_from_disk
-import collections
-from typing import Any,Tuple
 import transformers
+from datasets import load_from_disk
+from tqdm.auto import tqdm
 from transformers import EvalPrediction
 
-def prepare_train_features(examples,tokenizer):
-        # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
-        # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
-        tokenized_examples = tokenizer(
-            examples['question'],
-            examples['context'],
-            truncation="only_second",
-            max_length=512,
-            stride=128,
-            return_overflowing_tokens=True,
-            return_offsets_mapping=True,
-            return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
-            padding="max_length"
-        )
 
-        # 길이가 긴 context가 등장할 경우 truncate를 진행해야하므로, 해당 데이터셋을 찾을 수 있도록 mapping 가능한 값이 필요합니다.
-        sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
-        # token의 캐릭터 단위 position를 찾을 수 있도록 offset mapping을 사용합니다.
-        # start_positions과 end_positions을 찾는데 도움을 줄 수 있습니다.
-        offset_mapping = tokenized_examples.pop("offset_mapping")
+def prepare_train_features(examples, tokenizer):
+    # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
+    # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
+    tokenized_examples = tokenizer(
+        examples["question"],
+        examples["context"],
+        truncation="only_second",
+        max_length=512,
+        stride=128,
+        return_overflowing_tokens=True,
+        return_offsets_mapping=True,
+        return_token_type_ids=False,  # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
+        padding="max_length",
+    )
 
-        # 데이터셋에 "start position", "enc position" label을 부여합니다.
-        tokenized_examples["start_positions"] = []
-        tokenized_examples["end_positions"] = []
+    # 길이가 긴 context가 등장할 경우 truncate를 진행해야하므로, 해당 데이터셋을 찾을 수 있도록 mapping 가능한 값이 필요합니다.
+    sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
+    # token의 캐릭터 단위 position를 찾을 수 있도록 offset mapping을 사용합니다.
+    # start_positions과 end_positions을 찾는데 도움을 줄 수 있습니다.
+    offset_mapping = tokenized_examples.pop("offset_mapping")
 
-        for i, offsets in enumerate(offset_mapping):
-            input_ids = tokenized_examples["input_ids"][i]
-            cls_index = input_ids.index(tokenizer.cls_token_id)  # cls index
+    # 데이터셋에 "start position", "enc position" label을 부여합니다.
+    tokenized_examples["start_positions"] = []
+    tokenized_examples["end_positions"] = []
 
-            # sequence id를 설정합니다 (to know what is the context and what is the question).
-            sequence_ids = tokenized_examples.sequence_ids(i)
+    for i, offsets in enumerate(offset_mapping):
+        input_ids = tokenized_examples["input_ids"][i]
+        cls_index = input_ids.index(tokenizer.cls_token_id)  # cls index
 
-            # 하나의 example이 여러개의 span을 가질 수 있습니다.
-            sample_index = sample_mapping[i]
-            answers = examples['answers'][sample_index]
+        # sequence id를 설정합니다 (to know what is the context and what is the question).
+        sequence_ids = tokenized_examples.sequence_ids(i)
 
-            # answer가 없을 경우 cls_index를 answer로 설정합니다(== example에서 정답이 없는 경우 존재할 수 있음).
-            if len(answers["answer_start"]) == 0:
+        # 하나의 example이 여러개의 span을 가질 수 있습니다.
+        sample_index = sample_mapping[i]
+        answers = examples["answers"][sample_index]
+
+        # answer가 없을 경우 cls_index를 answer로 설정합니다(== example에서 정답이 없는 경우 존재할 수 있음).
+        if len(answers["answer_start"]) == 0:
+            tokenized_examples["start_positions"].append(cls_index)
+            tokenized_examples["end_positions"].append(cls_index)
+        else:
+            # text에서 정답의 Start/end character index
+            start_char = answers["answer_start"][0]
+            end_char = start_char + len(answers["text"][0])
+
+            # text에서 current span의 Start token index
+            token_start_index = 0
+            while sequence_ids[token_start_index] != 1:
+                token_start_index += 1
+
+            # text에서 current span의 End token index
+            token_end_index = len(input_ids) - 1
+            while sequence_ids[token_end_index] != 1:
+                token_end_index -= 1
+
+            # 정답이 span을 벗어났는지 확인합니다(정답이 없는 경우 CLS index로 label되어있음).
+            if not (
+                offsets[token_start_index][0] <= start_char
+                and offsets[token_end_index][1] >= end_char
+            ):
                 tokenized_examples["start_positions"].append(cls_index)
                 tokenized_examples["end_positions"].append(cls_index)
             else:
-                # text에서 정답의 Start/end character index
-                start_char = answers["answer_start"][0]
-                end_char = start_char + len(answers["text"][0])
-
-                # text에서 current span의 Start token index
-                token_start_index = 0
-                while sequence_ids[token_start_index] != 1:
-                    token_start_index += 1
-
-                # text에서 current span의 End token index
-                token_end_index = len(input_ids) - 1
-                while sequence_ids[token_end_index] !=1:
-                    token_end_index -= 1
-
-                # 정답이 span을 벗어났는지 확인합니다(정답이 없는 경우 CLS index로 label되어있음).
-                if not (
-                    offsets[token_start_index][0] <= start_char
-                    and offsets[token_end_index][1] >= end_char
+                # token_start_index 및 token_end_index를 answer의 끝으로 이동합니다.
+                # Note: answer가 마지막 단어인 경우 last offset을 따라갈 수 있습니다(edge case).
+                while (
+                    token_start_index < len(offsets)
+                    and offsets[token_start_index][0] <= start_char
                 ):
-                    tokenized_examples["start_positions"].append(cls_index)
-                    tokenized_examples["end_positions"].append(cls_index)
-                else:
-                    # token_start_index 및 token_end_index를 answer의 끝으로 이동합니다.
-                    # Note: answer가 마지막 단어인 경우 last offset을 따라갈 수 있습니다(edge case).
-                    while (
-                        token_start_index < len(offsets)
-                        and offsets[token_start_index][0] <= start_char
-                    ):
-                        token_start_index += 1
-                    tokenized_examples["start_positions"].append(token_start_index - 1)
-                    while offsets[token_end_index][1] >= end_char:
-                        token_end_index -= 1
-                    tokenized_examples["end_positions"].append(token_end_index + 1)
+                    token_start_index += 1
+                tokenized_examples["start_positions"].append(token_start_index - 1)
+                while offsets[token_end_index][1] >= end_char:
+                    token_end_index -= 1
+                tokenized_examples["end_positions"].append(token_end_index + 1)
 
-        return tokenized_examples
+    return tokenized_examples
 
-def prepare_validation_features(examples,tokenizer):
-        # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
-        # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
-        tokenized_examples = tokenizer(
-            examples['question'],
-            examples['context'],
-            truncation="only_second",
-            max_length=512,
-            stride=128,
-            return_overflowing_tokens=True,
-            return_offsets_mapping=True,
-            return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
-            padding="max_length",
-        )
 
-        # 길이가 긴 context가 등장할 경우 truncate를 진행해야하므로, 해당 데이터셋을 찾을 수 있도록 mapping 가능한 값이 필요합니다.
-        sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
+def prepare_validation_features(examples, tokenizer):
+    # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
+    # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
+    tokenized_examples = tokenizer(
+        examples["question"],
+        examples["context"],
+        truncation="only_second",
+        max_length=512,
+        stride=128,
+        return_overflowing_tokens=True,
+        return_offsets_mapping=True,
+        return_token_type_ids=False,  # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
+        padding="max_length",
+    )
 
-        # evaluation을 위해, prediction을 context의 substring으로 변환해야합니다.
-        # corresponding example_id를 유지하고 offset mappings을 저장해야합니다.
-        tokenized_examples["example_id"] = []
+    # 길이가 긴 context가 등장할 경우 truncate를 진행해야하므로, 해당 데이터셋을 찾을 수 있도록 mapping 가능한 값이 필요합니다.
+    sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
 
-        for i in range(len(tokenized_examples["input_ids"])):
-            # sequence id를 설정합니다 (to know what is the context and what is the question).
-            sequence_ids = tokenized_examples.sequence_ids(i)
-            context_index = 1 
+    # evaluation을 위해, prediction을 context의 substring으로 변환해야합니다.
+    # corresponding example_id를 유지하고 offset mappings을 저장해야합니다.
+    tokenized_examples["example_id"] = []
 
-            # 하나의 example이 여러개의 span을 가질 수 있습니다.
-            sample_index = sample_mapping[i]
-            tokenized_examples["example_id"].append(examples["id"][sample_index])
+    for i in range(len(tokenized_examples["input_ids"])):
+        # sequence id를 설정합니다 (to know what is the context and what is the question).
+        sequence_ids = tokenized_examples.sequence_ids(i)
+        context_index = 1
 
-            # Set to None the offset_mapping을 None으로 설정해서 token position이 context의 일부인지 쉽게 판별 할 수 있습니다.
-            # tokenized_examples["offset_mapping"][i] = [
-            #     (o if sequence_ids[k] == context_index else 0)
-            #     for k, o in enumerate(tokenized_examples["offset_mapping"][i])
-            # ]
-        return tokenized_examples
+        # 하나의 example이 여러개의 span을 가질 수 있습니다.
+        sample_index = sample_mapping[i]
+        tokenized_examples["example_id"].append(examples["id"][sample_index])
+
+        # Set to None the offset_mapping을 None으로 설정해서 token position이 context의 일부인지 쉽게 판별 할 수 있습니다.
+        # tokenized_examples["offset_mapping"][i] = [
+        #     (o if sequence_ids[k] == context_index else 0)
+        #     for k, o in enumerate(tokenized_examples["offset_mapping"][i])
+        # ]
+    return tokenized_examples
+
 
 def postprocess_qa_predictions(
     examples,
@@ -171,7 +175,7 @@ def postprocess_qa_predictions(
     # assert len(predictions[0]) == len(
     #     features
     # ), print(f"Got {len(predictions[0])} predictions and {len(features)} features.")
-    #print(predictions[0], features)
+    # print(predictions[0], features)
     # example과 mapping되는 feature 생성
     example_id_to_index = {k: i for i, k in enumerate(examples["id"])}
     features_per_example = collections.defaultdict(list)
@@ -222,7 +226,9 @@ def postprocess_qa_predictions(
                 0 : n_best_size + 1
             ].tolist()
 
-            end_indexes = torch.argsort(end_logits, descending=True)[0 : n_best_size + 1].tolist()
+            end_indexes = torch.argsort(end_logits, descending=True)[
+                0 : n_best_size + 1
+            ].tolist()
 
             for start_index in start_indexes:
                 for end_index in end_indexes:
@@ -273,7 +279,7 @@ def postprocess_qa_predictions(
             p["offsets"] == (0, 0) for p in predictions
         ):
             predictions.append(min_null_prediction)
-        
+
         # offset을 사용하여 original context에서 answer text를 수집합니다.
         context = example["context"]
         for pred in predictions:
@@ -335,44 +341,42 @@ def postprocess_qa_predictions(
 
     return all_predictions
 
-def post_processing_function(id, predictions, tokenizer, mode):
-        # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
-        if mode == 'eval':
-            examples = load_from_disk('/opt/ml/input/data/train_dataset/')['validation']
-            features = examples.map(
-                prepare_validation_features,
-                batched=True,
-                num_proc=4,
-                remove_columns=examples.column_names,
-                fn_kwargs={"tokenizer":tokenizer})
-        else:
-            examples = load_from_disk('/opt/ml/input/data/test_dataset/')['validation']
-            features = examples.map(
-                prepare_validation_features,
-                batched=True,
-                num_proc=4,
-                remove_columns=examples.column_names,
-                fn_kwargs={"tokenizer":tokenizer})
-                
-        predictions = postprocess_qa_predictions(
-            examples = examples,
-            features = features,
-            id = id,
-            predictions=predictions,
-            max_answer_length=100,
-        )
-        # Metric을 구할 수 있도록 Format을 맞춰줍니다.
-        formatted_predictions = [
-            {"id": k, "prediction_text": v} for k, v in predictions.items()
-        ]
-        if mode=='predict':
-            return formatted_predictions
 
-        elif mode=='eval':
-            references = [
-                {"id": ex["id"], "answers": ex['answers']}
-                for ex in examples
-            ]
-            return EvalPrediction(
-                predictions=formatted_predictions, label_ids=references
-            )
+def post_processing_function(id, predictions, tokenizer, mode):
+    # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
+    if mode == "eval":
+        examples = load_from_disk("/opt/ml/input/data/train_dataset/")["validation"]
+        features = examples.map(
+            prepare_validation_features,
+            batched=True,
+            num_proc=4,
+            remove_columns=examples.column_names,
+            fn_kwargs={"tokenizer": tokenizer},
+        )
+    else:
+        examples = load_from_disk("/opt/ml/input/data/test_dataset/")["validation"]
+        features = examples.map(
+            prepare_validation_features,
+            batched=True,
+            num_proc=4,
+            remove_columns=examples.column_names,
+            fn_kwargs={"tokenizer": tokenizer},
+        )
+
+    predictions = postprocess_qa_predictions(
+        examples=examples,
+        features=features,
+        id=id,
+        predictions=predictions,
+        max_answer_length=100,
+    )
+    # Metric을 구할 수 있도록 Format을 맞춰줍니다.
+    formatted_predictions = [
+        {"id": k, "prediction_text": v} for k, v in predictions.items()
+    ]
+    if mode == "predict":
+        return formatted_predictions
+
+    elif mode == "eval":
+        references = [{"id": ex["id"], "answers": ex["answers"]} for ex in examples]
+        return EvalPrediction(predictions=formatted_predictions, label_ids=references)

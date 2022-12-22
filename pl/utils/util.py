@@ -1,14 +1,18 @@
+import logging
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from tqdm.auto import tqdm
 from datasets import load_metric
-import logging
+from tqdm.auto import tqdm
+
 logger = logging.getLogger(__name__)
+
 
 def compute_metrics(pred):
     metric = load_metric("squad")
     return metric.compute(predictions=pred.predictions, references=pred.label_ids)
+
 
 # def check_no_error(
 #     data_args: DataTrainingArguments,
@@ -36,24 +40,24 @@ def compute_metrics(pred):
 #                 "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
 #             )
 
-    # Tokenizer check: 해당 script는 Fast tokenizer를 필요로합니다.
-    # if not isinstance(tokenizer, PreTrainedTokenizerFast):
-    #     raise ValueError(
-    #         "This example script only works for models that have a fast tokenizer. Checkout the big table of models "
-    #         "at https://huggingface.co/transformers/index.html#bigtable to find the model types that meet this "
-    #         "requirement"
-    #     )
+# Tokenizer check: 해당 script는 Fast tokenizer를 필요로합니다.
+# if not isinstance(tokenizer, PreTrainedTokenizerFast):
+#     raise ValueError(
+#         "This example script only works for models that have a fast tokenizer. Checkout the big table of models "
+#         "at https://huggingface.co/transformers/index.html#bigtable to find the model types that meet this "
+#         "requirement"
+#     )
 
-    # if data_args.max_seq_length > tokenizer.model_max_length:
-    #     logger.warn(
-    #         f"The max_seq_length passed ({data_args.max_seq_length}) is larger than the maximum length for the"
-    #         f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
-    #     )
-    # max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
+# if data_args.max_seq_length > tokenizer.model_max_length:
+#     logger.warn(
+#         f"The max_seq_length passed ({data_args.max_seq_length}) is larger than the maximum length for the"
+#         f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
+#     )
+# max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
 
-    # if "validation" not in datasets:
-    #     raise ValueError("--do_eval requires a validation dataset")
-    # return last_checkpoint, max_seq_length
+# if "validation" not in datasets:
+#     raise ValueError("--do_eval requires a validation dataset")
+# return last_checkpoint, max_seq_length
 
 
 # loss funcion
@@ -74,6 +78,8 @@ class FocalLoss(nn.Module):
             weight=self.weight,
             reduction=self.reduction,
         )
+
+
 class LabelSmoothingLoss(nn.Module):
     def __init__(self, classes=3, smoothing=0.0, dim=-1):
         super(LabelSmoothingLoss, self).__init__()
@@ -123,6 +129,7 @@ _criterion_entrypoints = {
     "label_smoothing": LabelSmoothingLoss(),
     "f1": F1Loss(),
 }
+
 
 def criterion_entrypoint(criterion_name):
     return _criterion_entrypoints[criterion_name]
