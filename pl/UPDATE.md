@@ -1,4 +1,10 @@
 # UPDATE
+
+## version 1.2.0 (12.22)
+* PL Sweep 추가
+  * default가 sweep_config.yaml이기에 해당 파일만 수정하면 가능
+  * python sweep.py로 실행
+
 ## version 1.1.0 (12.22)
 * PL 이식
   * predict를 제외하고 이식 완료(추가 예정)
