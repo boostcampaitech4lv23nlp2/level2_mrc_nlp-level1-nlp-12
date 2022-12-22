@@ -15,6 +15,7 @@ outputs
 wandb
 nohup.out
 arrow_to_csv.ipynb
+re_temp
 # Distribution / packaging
 .Python
 build/
