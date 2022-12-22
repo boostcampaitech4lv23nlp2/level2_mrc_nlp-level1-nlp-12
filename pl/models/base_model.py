@@ -4,14 +4,16 @@ from importlib import import_module
 sys.path.append("/opt/ml/input/code/pl")
 
 from itertools import chain
+
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import transformers
-
-from utils.util import (criterion_entrypoint, compute_metrics)
-from utils.data_utils import *
 from datasets import load_from_disk
+
+from utils.data_utils import *
+from utils.util import compute_metrics, criterion_entrypoint
+
 
 class Model(pl.LightningModule):
     def __init__(self, config):
@@ -35,10 +37,10 @@ class Model(pl.LightningModule):
         # Loss 계산을 위해 사용될 CE Loss를 호출합니다.
         self.loss_func = criterion_entrypoint(config.loss.loss_name)
         self.optimizer_name = config.optimizer.optimizer_name
-        
-        self.eval_example = load_from_disk(config.path.train_path)['validation']
-        self.predict_example = load_from_disk(config.path.test_path)['validation']
-        
+
+        self.eval_example = load_from_disk(config.path.train_path)["validation"]
+        self.predict_example = load_from_disk(config.path.test_path)["validation"]
+
     def forward(self, x):
         x = self.plm(
             input_ids=x["input_ids"],
@@ -50,34 +52,34 @@ class Model(pl.LightningModule):
     def training_step(self, batch):
 
         start_logits, end_logits = self(batch)
-        s_position, e_position = batch['start_positions'], batch['end_positions']
+        s_position, e_position = batch["start_positions"], batch["end_positions"]
 
         l_s = self.loss_func(start_logits, s_position)
         l_e = self.loss_func(end_logits, e_position)
 
-        loss = (l_s+l_e) / 2
+        loss = (l_s + l_e) / 2
         self.log("train_loss", loss)
-        
+
         return loss
 
     def validation_step(self, batch, batch_idx):
         data, id = batch
         start_logits, end_logits = self(data)
 
-        return {"start_logits": start_logits, 'end_logits' : end_logits, "id": id}
+        return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
 
     def validation_epoch_end(self, outputs):
         start_logits = torch.cat([x["start_logits"] for x in outputs])
         end_logits = torch.cat([x["end_logits"] for x in outputs])
         predictions = (start_logits, end_logits)
 
-        ids = [x['id'] for x in outputs]
+        ids = [x["id"] for x in outputs]
         id = list(chain(*ids))
-        
-        preds = post_processing_function(id, predictions, self.tokenizer, 'eval')
+
+        preds = post_processing_function(id, predictions, self.tokenizer, "eval")
         result = compute_metrics(preds)
-        self.log("val_em", result['exact_match'])
-        self.log("val_f1", result['f1'])
+        self.log("val_em", result["exact_match"])
+        self.log("val_f1", result["f1"])
 
     def test_step(self, batch, batch_idx):
         data, id = batch
@@ -91,13 +93,13 @@ class Model(pl.LightningModule):
         end_logits = torch.cat([x["end_logits"] for x in outputs])
         predictions = (start_logits, end_logits)
 
-        ids = [x['id'] for x in outputs]
+        ids = [x["id"] for x in outputs]
         id = list(chain(*ids))
 
-        preds = post_processing_function(id, predictions, self.tokenizer, 'eval')
+        preds = post_processing_function(id, predictions, self.tokenizer, "eval")
         result = compute_metrics(preds)
-        self.log("val_em", result['exact_match'])
-        self.log("val_f1", result['f1'])
+        self.log("val_em", result["exact_match"])
+        self.log("val_f1", result["f1"])
 
     # def predict_step(self, batch, batch_idx):
 
@@ -117,8 +119,7 @@ class Model(pl.LightningModule):
             )
         else:
             optimizer = opt_module(
-                filter(lambda p: p.requires_grad, self.parameters()),
-                lr=self.lr
+                filter(lambda p: p.requires_grad, self.parameters()), lr=self.lr
             )
         if self.lr_sch_use:
             t_total = 2030 * 7  # train_dataloader len, epochs
