@@ -1,7 +1,7 @@
 import sys
 from importlib import import_module
 
-sys.path.append("/opt/ml/input/code/level2_mrc_nlp-level1-nlp-12/pl")
+sys.path.append("/opt/ml/input/code1/level2_mrc_nlp-level1-nlp-12/pl")
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -73,7 +73,7 @@ class Model(pl.LightningModule):
                 id.append(j)
         preds = post_processing_function(id, predictions, 'eval')
         result = compute_metrics(preds)
-        print(result)
+        #print(result)
         self.log("val_em", result['exact_match'])
         self.log("val_f1", result['f1'])
 
