@@ -1,7 +1,7 @@
 import sys
 from importlib import import_module
 
-sys.path.append("/opt/ml/input/code1/level2_mrc_nlp-level1-nlp-12/pl")
+sys.path.append("/opt/ml/input/code/pl")
 import numpy as np
 import pytorch_lightning as pl
 import torch

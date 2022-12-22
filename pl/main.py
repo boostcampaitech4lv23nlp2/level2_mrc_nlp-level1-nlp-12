@@ -33,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, default="base_config")
     args, _ = parser.parse_known_args()
 
-    cfg = OmegaConf.load(f"/opt/ml/input/code1/pl/config/{args.config}.yaml")
+    cfg = OmegaConf.load(f"/opt/ml/input/code/pl/config/{args.config}.yaml")
     # os.environ["WANDB_API_KEY"] = wandb_dict[cfg.wandb.wandb_username]
     wandb.login(key=wandb_dict[cfg.wandb.wandb_username])
     model_name_ch = re.sub("/", "_", cfg.model.model_name)
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     pl.seed_everything(cfg.train.seed, workers=True)
 
-    ck_dir_path = f"/opt/ml/input/code1/pl/checkpoint/{model_name_ch}"
+    ck_dir_path = f"/opt/ml/input/code/pl/checkpoint/{model_name_ch}"
     if not os.path.exists(ck_dir_path):
         os.makedirs(ck_dir_path)
 
