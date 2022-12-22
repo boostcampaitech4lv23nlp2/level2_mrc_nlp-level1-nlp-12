@@ -1,4 +1,5 @@
 import sys
+
 from importlib import import_module
 
 sys.path.append("/opt/ml/input/code/pl")
@@ -9,11 +10,10 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import transformers
-from datasets import load_from_disk
 
+from datasets import load_from_disk
 from utils.data_utils import *
 from utils.util import compute_metrics, criterion_entrypoint
-
 
 class Model(pl.LightningModule):
     def __init__(self, config):
@@ -31,9 +31,7 @@ class Model(pl.LightningModule):
         self.plm = transformers.AutoModelForQuestionAnswering.from_pretrained(
             pretrained_model_name_or_path=self.model_name
         )
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-            self.model_name, max_length=200
-        )
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name, max_length=200)
         # Loss 계산을 위해 사용될 CE Loss를 호출합니다.
         self.loss_func = criterion_entrypoint(config.loss.loss_name)
         self.optimizer_name = config.optimizer.optimizer_name
@@ -118,26 +116,16 @@ class Model(pl.LightningModule):
                 weight_decay=0.01,
             )
         else:
-            optimizer = opt_module(
-                filter(lambda p: p.requires_grad, self.parameters()), lr=self.lr
-            )
+            optimizer = opt_module(filter(lambda p: p.requires_grad, self.parameters()), lr=self.lr)
         if self.lr_sch_use:
             t_total = 2030 * 7  # train_dataloader len, epochs
             warmup_step = int(t_total * 0.1)
 
             _scheduler_dic = {
-                "StepLR": torch.optim.lr_scheduler.StepLR(
-                    optimizer, self.lr_decay_step, gamma=0.5
-                ),
-                "ReduceLROnPlateau": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                    optimizer, factor=0.1, patience=10
-                ),
-                "CosineAnnealingLR": torch.optim.lr_scheduler.CosineAnnealingLR(
-                    optimizer, T_max=2, eta_min=0.0
-                ),
-                "constant_warmup": transformers.get_constant_schedule_with_warmup(
-                    optimizer, 100
-                ),
+                "StepLR": torch.optim.lr_scheduler.StepLR(optimizer, self.lr_decay_step, gamma=0.5),
+                "ReduceLROnPlateau": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=10),
+                "CosineAnnealingLR": torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=2, eta_min=0.0),
+                "constant_warmup": transformers.get_constant_schedule_with_warmup(optimizer, 100),
                 "cosine_warmup": transformers.get_cosine_schedule_with_warmup(
                     optimizer, num_warmup_steps=10, num_training_steps=t_total
                 ),

@@ -8,12 +8,11 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 import transformers
+
 from datasets import load_from_disk
 from tqdm.auto import tqdm
-
 from utils.data_utils import *
 from utils.util import *
-
 
 class Train_Dataset(torch.utils.data.Dataset):
     """Dataset 구성을 위한 Class"""
@@ -55,9 +54,7 @@ class Dataloader(pl.LightningDataModule):
     Trainer에 들어갈 데이터셋을 호출
     """
 
-    def __init__(
-        self, model_name, batch_size, shuffle, train_path, test_path, split_seed=42
-    ):
+    def __init__(self, model_name, batch_size, shuffle, train_path, test_path, split_seed=42):
         super().__init__()
         self.model_name = model_name
         self.batch_size = batch_size
@@ -72,9 +69,7 @@ class Dataloader(pl.LightningDataModule):
         self.test_dataset = None
         self.predict_dataset = None
 
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-            model_name, max_length=200
-        )
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_name, max_length=200)
 
     def setup(self, stage="fit"):
         if stage == "fit":
