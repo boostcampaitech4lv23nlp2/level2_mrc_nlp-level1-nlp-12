@@ -1,4 +1,10 @@
 # UPDATE
+
+## version 1.4.0
+* Tune 
+  * lr_find, batch_find 추가
+  * batch_find는 오류가 있음
+  * lr_find는 정상동작
 ## version 1.3.1
 * base_model fix
   * test_step의 해당 코드 변경
