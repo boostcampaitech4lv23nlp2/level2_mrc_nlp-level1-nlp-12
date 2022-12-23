@@ -7,7 +7,7 @@ data:
     augmentation: # adea, bt 등등
     
 model:
-    model_name: klue/roberta-small
+    model_name: klue/roberta-large
     saved_name: base
 
 train:
