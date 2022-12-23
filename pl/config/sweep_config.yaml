@@ -33,11 +33,11 @@ fold:
     nums_folds: 5
 
 sweep:
-    method: asdf
-    lr_min: asdf
-    lr_max: asdf
-    name: asdf
-    count: asdf
+    method: bayes
+    lr_min: 1e-5
+    lr_max: 5e-5
+    name: klue/roberta-small
+    count: 3
 
 wandb:
     wandb_username: daniel0801
