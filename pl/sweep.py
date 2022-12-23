@@ -61,7 +61,7 @@ if __name__ == "__main__":
     )
 
     # Earlystopping
-    earlystopping = EarlyStopping(monitor="val_em", patience=3, mode="max")
+    earlystopping = EarlyStopping(monitor="val_em", patience=2, mode="max")
     # dataloader와 model을 생성합니다.
     def sweep_train(config=None):
         wandb.init(config=config)
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         )
 
         trainer.fit(model=model, datamodule=dataloader)
-        trainer.test(model=model, datamodule=dataloader)
+        # trainer.test(model=model, datamodule=dataloader)
         ck_dir_path = f"/opt/ml/input/code/pl/checkpoint/{model_name_ch}"
         if not os.path.exists(ck_dir_path):
             os.makedirs(ck_dir_path)

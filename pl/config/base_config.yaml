@@ -18,7 +18,7 @@ train:
     logging_step: 1
     
 optimizer:
-    learning_rate: 1e-5
+    learning_rate: 0.000048666899101127755
     optimizer_name: AdamW
     lr_weight_decay: False
     lr_decay_step: 20
@@ -34,5 +34,5 @@ fold:
 
 wandb:
     wandb_username: rion_
-    wandb_project: re_temp
-    wandb_entity: re_et
+    wandb_project: mrc_temp
+    wandb_entity: mrc_et
