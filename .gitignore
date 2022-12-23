@@ -1,3 +1,7 @@
+wandb
+outputs
+models
+
 checkpoint
 
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
