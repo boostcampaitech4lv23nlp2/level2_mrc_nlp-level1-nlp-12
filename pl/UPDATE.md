@@ -1,7 +1,14 @@
 # UPDATE
 
+## version 1.3.0
+* EDA 추가
+  * 데이터 개수, 형태, 길이 확인
+  * 외부데이터셋 위와 동일하게 EDA 진행
+* question 앞에 명사, 형용사, 관형사 추가
+
 ## version 1.2.1 (12.23)
 * sweep_config.yaml에 sweep parameter 추가
+  
 ## version 1.2.0 (12.22)
 * PL Sweep 추가
   * default가 sweep_config.yaml이기에 해당 파일만 수정하면 가능
