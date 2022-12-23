@@ -1,9 +1,17 @@
 # UPDATE
-## version 1.0.1 (12.19)
-* 어떤 기능 추가 (재덕)
-  * 이런 기능 추가했다
-  * 어디에 추가했다
-  * 
+
+## version 1.2.1 (12.23)
+* sweep_config.yaml에 sweep parameter 추가
+## version 1.2.0 (12.22)
+* PL Sweep 추가
+  * default가 sweep_config.yaml이기에 해당 파일만 수정하면 가능
+  * python sweep.py로 실행
+
+## version 1.1.0 (12.22)
+* PL 이식
+  * predict를 제외하고 이식 완료(추가 예정)
+  * 기존과 동일하게 train.sh을 통해서 멀티 실행 가능
+  * 사용법은 sts, re와 같음
 
 ## BASIC README
 * 기존 코드 및 README.md -> base 폴더

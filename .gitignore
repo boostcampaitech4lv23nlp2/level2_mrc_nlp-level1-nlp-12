@@ -1,3 +1,9 @@
+wandb
+outputs
+models
+
+checkpoint
+
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,python
 
@@ -9,7 +15,11 @@ __pycache__/
 
 # C extensions
 *.so
-
+outputs
+wandb
+nohup.out
+arrow_to_csv.ipynb
+re_temp
 # Distribution / packaging
 .Python
 build/
@@ -184,7 +194,7 @@ cython_debug/
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
 
-base_code/
+base/
 dataset/
 pl/output/
 pl/re/

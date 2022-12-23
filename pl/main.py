@@ -1,18 +1,19 @@
 import argparse
 import os
 import re
+
 from datetime import datetime, timedelta
 
 import pytorch_lightning as pl
 import torch
 import wandb
+
+from datamodule.base_data import *
+from models.base_model import *
 from omegaconf import OmegaConf
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
-
-from data.data import *
-from model.model import *
 
 time_ = datetime.now() + timedelta(hours=9)
 time_now = time_.strftime("%m%d%H%M")
@@ -33,37 +34,34 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, default="base_config")
     args, _ = parser.parse_known_args()
 
-    cfg = OmegaConf.load(f"/opt/ml/input/code/pl/config{args.config}.yaml")
-
+    cfg = OmegaConf.load(f"/opt/ml/input/code/pl/config/{args.config}.yaml")
     # os.environ["WANDB_API_KEY"] = wandb_dict[cfg.wandb.wandb_username]
     wandb.login(key=wandb_dict[cfg.wandb.wandb_username])
     model_name_ch = re.sub("/", "_", cfg.model.model_name)
     wandb_logger = WandbLogger(
         log_model="all",
-        name=f"{cfg.model.saved_name}_{cfg.train.batch_size}_{cfg.train.learning_rate}_{time_now}",
+        name=f"{cfg.model.saved_name}_{cfg.train.batch_size}_{cfg.optimizer.learning_rate}_{time_now}",
         project=cfg.wandb.wandb_project,
         entity=cfg.wandb.wandb_entity,
     )
 
     pl.seed_everything(cfg.train.seed, workers=True)
 
-    ck_dir_path = f"/opt/ml/code/pl/checkpoint/{model_name_ch}"
+    ck_dir_path = f"/opt/ml/input/code/pl/checkpoint/{model_name_ch}"
     if not os.path.exists(ck_dir_path):
         os.makedirs(ck_dir_path)
 
     # Checkpoint
     checkpoint_callback = ModelCheckpoint(
-        # TODO: 변경점
         dirpath=ck_dir_path,
-        filename="{epoch}_{val_loss:.4f}",
-        monitor="val_f1",
+        filename="{epoch}_{val_em:.2f}",
+        monitor="val_em",
         save_top_k=1,
         mode="max",
     )
 
     # Earlystopping
-    # TODO: 변경점
-    earlystopping = EarlyStopping(monitor="val_f1", patience=3, mode="max")
+    earlystopping = EarlyStopping(monitor="val_em", patience=3, mode="max")
 
     # dataloader와 model을 생성합니다.
     dataloader = Dataloader(
@@ -88,7 +86,7 @@ if __name__ == "__main__":
         deterministic=True,
         # limit_train_batches=0.15,  # use only 15% of training data
         # limit_val_batches = 0.01, # use only 1% of val data
-        # limit_train_batches=10    # use only 10 batches of training data
+        # limit_train_batches=0.01    # use only 10 batches of training data
     )
 
     trainer.fit(model=model, datamodule=dataloader)
