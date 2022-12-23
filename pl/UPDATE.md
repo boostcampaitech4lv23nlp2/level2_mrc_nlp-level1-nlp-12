@@ -1,5 +1,7 @@
 # UPDATE
 
+## version 1.2.1 (12.23)
+* sweep_config.yaml에 sweep parameter 추가
 ## version 1.2.0 (12.22)
 * PL Sweep 추가
   * default가 sweep_config.yaml이기에 해당 파일만 수정하면 가능
