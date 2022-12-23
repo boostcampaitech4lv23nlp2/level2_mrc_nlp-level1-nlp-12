@@ -1,4 +1,12 @@
 # UPDATE
+## version 1.3.1
+* base_model fix
+  * test_step의 해당 코드 변경
+  ~~~python
+  prediction = (start_logits, end_logits)
+  return {"prediction": prediction, "id": id}
+  ~~~
+ * 해당 코드 validation과 맞춤
 
 ## version 1.3.0
 * EDA 추가
@@ -8,7 +16,7 @@
 
 ## version 1.2.1 (12.23)
 * sweep_config.yaml에 sweep parameter 추가
-  
+
 ## version 1.2.0 (12.22)
 * PL Sweep 추가
   * default가 sweep_config.yaml이기에 해당 파일만 수정하면 가능
@@ -26,9 +34,9 @@
 * PL 폴더에 모듈화된 코드로 기존 코드를 이식
 * VSCode markdown all in one 확장 프로그램을 통해 마크다운 보기 가능
 * Live Share을 통해 코딩 환경 공유 가능
-* Commit Convention 잘 지키기 
+* Commit Convention 잘 지키기
   * 노션 Project Rule에 Convention 참고 링크 참조
-* Git Flow branch strategy 사용 
+* Git Flow branch strategy 사용
   * 노션 참조
 ## 소개
 
@@ -41,4 +49,3 @@
   * 기능 설명
   * 기능 코드 위치
   * 예상 충돌 및 해결 방안
-
