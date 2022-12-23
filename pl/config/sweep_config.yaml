@@ -32,6 +32,13 @@ fold:
     fold: False
     nums_folds: 5
 
+sweep:
+    method: bayes
+    lr_min: 1e-5
+    lr_max: 5e-5
+    name: klue/roberta-small
+    count: 3
+
 wandb:
     wandb_username: daniel0801
     wandb_project: re_temp

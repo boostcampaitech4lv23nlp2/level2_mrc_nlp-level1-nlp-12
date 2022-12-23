@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: check-yaml              # 모든 yaml 파일의 구문이 맞는지 확인
+      - id: end-of-file-fixer       # 모든 파일의 끝에 new line 이 없으면 추가 : W292 방지
+      - id: trailing-whitespace     # 모든 라인의 끝에 공백이 있는지 확인하고 있으면 삭제
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort                   # .isort : (python)import를 알파벳순, 유형별, 섹션별로 자동으로 정렬
+  - repo: https://github.com/ambv/black
+    rev: 22.10.0
+    hooks:
+      - id: black                   # .black : PEP8을 기반으로 가독성이 더 좋은 코드스타일로 자동으로 변환해주는 포맷터
+        #language_version: python3.8
+  - repo: https://github.com/myint/autoflake
+    rev: v1.7.7
+    hooks:                          # autoflake는 사용되지 않는 import 및 변수를 제거(pyflakes사용)
+      - id: autoflake               # flake8 검사 전에 자동으로 변경될 수 있도록 설정
+        args:
+          - --in-place                    # diff를 출력하는 대신 파일을 변경
+          - --remove-unused-variables     # 사용하지 않는 변수 제거
+          - --remove-all-unused-imports   # 사용하지 않는 import 제거
+          - --expand-star-imports         # ??
+  - repo: https://github.com/PyCQA/flake8
+    rev: 5.0.4
+    hooks:
+      - id: flake8                      # 자동변환 기능은 없고 체크만
+        args: [--max-line-length=120]
+default_language_version:
+  python: python3.8
