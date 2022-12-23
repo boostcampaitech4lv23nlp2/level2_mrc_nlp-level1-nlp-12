@@ -34,12 +34,12 @@ fold:
 
 sweep:
     method: bayes
-    lr_min: 1e-5
-    lr_max: 5e-5
+    lr_min: 1e-6
+    lr_max: 1e-4
     name: klue/roberta-small
-    count: 3
+    count: 20
 
 wandb:
-    wandb_username: daniel0801
+    wandb_username: rion_
     wandb_project: re_temp
     wandb_entity: re_et
