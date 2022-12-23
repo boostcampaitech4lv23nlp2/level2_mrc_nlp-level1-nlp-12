@@ -3,7 +3,7 @@ name: Conventional Commits
 on:
   pull_request:
   push:
-    branches: [ develop, feature-precommit ]
+    branches: [ develop, main]
 
 jobs:
   build:
