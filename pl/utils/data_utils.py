@@ -6,10 +6,17 @@ import numpy as np
 import torch
 import transformers
 
-from datasets import load_from_disk
+from datasets import (
+    Dataset,
+    DatasetDict,
+    Features,
+    Sequence,
+    Value,
+    load_from_disk,
+)
 from tqdm.auto import tqdm
 from transformers import EvalPrediction
-
+from retrievals.base_retrieval import SparseRetrieval
 def prepare_train_features(examples, tokenizer):
     # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
     # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
@@ -197,9 +204,9 @@ def postprocess_qa_predictions(
             # logit과 original context의 logit을 mapping합니다.
             offset_mapping = features["offset_mapping"][feature_index]
             # Optional : `token_is_max_context`, 제공되는 경우 현재 기능에서 사용할 수 있는 max context가 없는 answer를 제거합니다
-            # token_is_max_context = features[feature_index].get(
-            #     "token_is_max_context", 0
-            # )
+            token_is_max_context = features[feature_index].get(
+                "token_is_max_context", 0
+            )
 
             # minimum null prediction을 업데이트 합니다.
             feature_null_score = start_logits[0] + end_logits[0]
@@ -230,11 +237,11 @@ def postprocess_qa_predictions(
                     if end_index < start_index or end_index - start_index + 1 > max_answer_length:
                         continue
                     # 최대 context가 없는 answer도 고려하지 않습니다.
-                    # if (
-                    #     token_is_max_context is not 0
-                    #     and not token_is_max_context.get(str(start_index), False)
-                    # ):
-                    #     continue
+                    if (
+                        token_is_max_context is not 0
+                        and not token_is_max_context.get(str(start_index), False)
+                    ):
+                        continue
                     prelim_predictions.append(
                         {
                             "offsets": (
@@ -306,10 +313,10 @@ def postprocess_qa_predictions(
     return all_predictions
 
 
-def post_processing_function(id, predictions, tokenizer, mode):
+def post_processing_function(id, predictions, tokenizer, mode, path):
     # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
     if mode == "eval":
-        examples = load_from_disk("/opt/ml/input/data/train_dataset/")["validation"]
+        examples = load_from_disk(path)["validation"]
         features = examples.map(
             prepare_validation_features,
             batched=True,
@@ -318,7 +325,7 @@ def post_processing_function(id, predictions, tokenizer, mode):
             fn_kwargs={"tokenizer": tokenizer},
         )
     else:
-        examples = load_from_disk("/opt/ml/input/data/test_dataset/")["validation"]
+        examples = load_from_disk(path)["validation"]
         features = examples.map(
             prepare_validation_features,
             batched=True,
@@ -342,3 +349,54 @@ def post_processing_function(id, predictions, tokenizer, mode):
     elif mode == "eval":
         references = [{"id": ex["id"], "answers": ex["answers"]} for ex in examples]
         return EvalPrediction(predictions=formatted_predictions, label_ids=references)
+
+def run_sparse_retrieval(
+    tokenize_fn,
+    datasets,
+    mode,
+    use_faiss,
+    data_path: str = "../../data",
+    context_path: str = "wikipedia_documents.json",
+):
+
+    # Query에 맞는 Passage들을 Retrieval 합니다.
+    retriever = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+    retriever.get_sparse_embedding()
+
+    if use_faiss:
+        retriever.build_faiss(num_clusters=64)
+        df = retriever.retrieve_faiss(
+            datasets["validation"], topk=10
+        )
+    else:
+        df = retriever.retrieve(datasets["validation"], topk=10)
+
+    # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
+    if mode=='predict':
+        f = Features(
+            {
+                "context": Value(dtype="string", id=None),
+                "id": Value(dtype="string", id=None),
+                "question": Value(dtype="string", id=None),
+            }
+        )
+
+    # train data 에 대해선 정답이 존재하므로 id question context answer 로 데이터셋이 구성됩니다.
+    elif mode == 'eval':
+        f = Features(
+            {
+                "answers": Sequence(
+                    feature={
+                        "text": Value(dtype="string", id=None),
+                        "answer_start": Value(dtype="int32", id=None),
+                    },
+                    length=-1,
+                    id=None,
+                ),
+                "context": Value(dtype="string", id=None),
+                "id": Value(dtype="string", id=None),
+                "question": Value(dtype="string", id=None),
+            }
+        )
+    datasets = DatasetDict({"validation": Dataset.from_pandas(df, features=f)})
+    return datasets

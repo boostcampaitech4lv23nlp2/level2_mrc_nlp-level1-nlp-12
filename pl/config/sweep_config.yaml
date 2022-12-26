@@ -7,8 +7,8 @@ data:
     augmentation: # adea, bt 등등
     
 model:
-    model_name: klue/roberta-small
-    saved_name: base
+    model_name: klue/roberta-large
+    saved_name: roberta-large
 
 train:
     seed: 42
@@ -36,10 +36,10 @@ sweep:
     method: bayes
     lr_min: 1e-6
     lr_max: 1e-4
-    name: klue/roberta-small
-    count: 20
+    name: klue/roberta-large
+    count: 5
 
 wandb:
-    wandb_username: rion_
+    wandb_username: daniel0801
     wandb_project: mrc_temp
     wandb_entity: mrc_et
