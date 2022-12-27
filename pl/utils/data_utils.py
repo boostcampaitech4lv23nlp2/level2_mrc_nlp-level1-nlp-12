@@ -5,7 +5,8 @@ from typing import Any, Tuple
 import numpy as np
 import torch
 import transformers
-
+import os
+import json
 from datasets import (
     Dataset,
     DatasetDict,
@@ -133,9 +134,11 @@ def postprocess_qa_predictions(
     features,
     id,
     predictions: Tuple[np.ndarray, np.ndarray],
+    output_dir = None,
     version_2_with_negative: bool = False,
     n_best_size: int = 20,
     max_answer_length: int = 30,
+    mode = 'eval',
     null_score_diff_threshold: float = 0.0,
 ):
     """
@@ -179,8 +182,8 @@ def postprocess_qa_predictions(
     # example과 mapping되는 feature 생성
     example_id_to_index = {k: i for i, k in enumerate(examples["id"])}
     features_per_example = collections.defaultdict(list)
-    for i, feature in enumerate(id):
-        features_per_example[example_id_to_index[feature]].append(i)
+    for i, feature in enumerate(features):
+        features_per_example[example_id_to_index[feature['example_id']]].append(i)
 
     # prediction, nbest에 해당하는 OrderedDict 생성합니다.
     all_predictions = collections.OrderedDict()
@@ -192,7 +195,6 @@ def postprocess_qa_predictions(
     for example_index, example in enumerate(tqdm(examples)):
         # 해당하는 현재 example index
         feature_indices = features_per_example[example_index]
-
         min_null_prediction = 0
         prelim_predictions = []
 
@@ -202,7 +204,7 @@ def postprocess_qa_predictions(
             start_logits = all_start_logits[feature_index]
             end_logits = all_end_logits[feature_index]
             # logit과 original context의 logit을 mapping합니다.
-            offset_mapping = features["offset_mapping"][feature_index]
+            offset_mapping = features[feature_index]["offset_mapping"]
             # Optional : `token_is_max_context`, 제공되는 경우 현재 기능에서 사용할 수 있는 max context가 없는 answer를 제거합니다
             token_is_max_context = features[feature_index].get(
                 "token_is_max_context", 0
@@ -229,8 +231,7 @@ def postprocess_qa_predictions(
                     if (
                         start_index >= len(offset_mapping)
                         or end_index >= len(offset_mapping)
-                        or offset_mapping[start_index] is 0
-                        or offset_mapping[end_index] is 0
+                        or (offset_mapping[start_index] == 0 and offset_mapping[end_index] == 0)
                     ):
                         continue
                     # 길이가 < 0 또는 > max_answer_length인 answer도 고려하지 않습니다.
@@ -238,7 +239,7 @@ def postprocess_qa_predictions(
                         continue
                     # 최대 context가 없는 answer도 고려하지 않습니다.
                     if (
-                        token_is_max_context is not 0
+                        token_is_max_context != 0
                         and not token_is_max_context.get(str(start_index), False)
                     ):
                         continue
@@ -309,7 +310,16 @@ def postprocess_qa_predictions(
             {k: (float(v) if isinstance(v, (np.float16, np.float32, np.float64)) else v) for k, v in pred.items()}
             for pred in predictions
         ]
-
+    if mode == 'predict':
+        output_dir = '/opt/ml/input/code/predictions'
+        prediction_file = os.path.join(
+            output_dir,
+            "predictions.json",
+        )
+        with open(prediction_file, "w", encoding="utf-8") as writer:
+            writer.write(
+                json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n"
+            )
     return all_predictions
 
 
@@ -325,21 +335,24 @@ def post_processing_function(id, predictions, tokenizer, mode, path):
             fn_kwargs={"tokenizer": tokenizer},
         )
     else:
-        examples = load_from_disk(path)["validation"]
+        examples = load_from_disk(path)
+        examples = run_sparse_retrieval(tokenizer.tokenize, examples, 'predict', False)
+        column_names = examples['validation'].column_names
+        examples = examples['validation']
         features = examples.map(
             prepare_validation_features,
             batched=True,
             num_proc=4,
-            remove_columns=examples.column_names,
+            remove_columns=column_names,
             fn_kwargs={"tokenizer": tokenizer},
         )
-
     predictions = postprocess_qa_predictions(
         examples=examples,
         features=features,
         id=id,
         predictions=predictions,
         max_answer_length=100,
+        mode=mode,
     )
     # Metric을 구할 수 있도록 Format을 맞춰줍니다.
     formatted_predictions = [{"id": k, "prediction_text": v} for k, v in predictions.items()]

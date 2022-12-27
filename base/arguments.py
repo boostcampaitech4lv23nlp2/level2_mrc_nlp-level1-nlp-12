@@ -9,7 +9,7 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        default="klue/roberta-small",
+        default="/opt/ml/input/code/pl/checkpoint/klue_roberta-small/epoch=1_val_loss=0.0000.ckpt",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },

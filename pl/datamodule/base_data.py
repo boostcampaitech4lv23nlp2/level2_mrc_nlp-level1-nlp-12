@@ -112,13 +112,13 @@ class Dataloader(pl.LightningDataModule):
             dataset = run_sparse_retrieval(
                 self.tokenizer.tokenize, dataset, 'predict', False,
             )
-            p_data = dataset['validation']
+            column_names = dataset['validation'].column_names
 
-            tokenized_p = p_data.map(
+            tokenized_p = dataset.map(
                 prepare_validation_features,
                 batched=True,
                 num_proc=4,
-                remove_columns=dataset["validation"].column_names,
+                remove_columns=column_names,
                 fn_kwargs={"tokenizer": self.tokenizer},
             )
 

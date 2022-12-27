@@ -1,6 +1,7 @@
 path:
     train_path: /opt/ml/input/data/train_dataset/
     test_path: /opt/ml/input/data/test_dataset/
+    output_path: /opt/ml/input/code/predictions
 
 data:
     shuffle: True

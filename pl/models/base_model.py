@@ -103,16 +103,6 @@ class Model(pl.LightningModule):
         start_logits, end_logits = self(data)
 
         return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
-    def predict_epoch_end(self, outputs):
-        start_logits = torch.cat([x["start_logits"] for x in outputs])
-        end_logits = torch.cat([x["end_logits"] for x in outputs])
-        predictions = (start_logits, end_logits)
-
-        ids = [x["id"] for x in outputs]
-        id = list(chain(*ids))
-
-        preds = post_processing_function(id, predictions, self.tokenizer, "eval", self.cfg.path.test_path)
-        return preds
 
 
     def configure_optimizers(self):
