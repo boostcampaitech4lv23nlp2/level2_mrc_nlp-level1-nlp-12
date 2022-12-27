@@ -19,7 +19,7 @@ class Model(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.save_hyperparameters()
-
+        self.cfg = config
         self.model_name = config.model.model_name
         self.lr = config.optimizer.learning_rate
         self.lr_sch_use = config.optimizer.lr_sch_use
@@ -74,37 +74,36 @@ class Model(pl.LightningModule):
         ids = [x["id"] for x in outputs]
         id = list(chain(*ids))
 
-        preds = post_processing_function(id, predictions, self.tokenizer, "eval")
+        preds = post_processing_function(id, predictions, self.tokenizer, "eval", self.cfg.path.train_path)
         result = compute_metrics(preds)
         self.log("val_em", result["exact_match"])
         self.log("val_f1", result["f1"])
 
-    def test_step(self, batch, batch_idx):
+    # def test_step(self, batch, batch_idx):
+    #     data, id = batch
+    #     start_logits, end_logits = self(data)
+
+    #     return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
+
+    # def test_epoch_end(self, outputs):
+    #     start_logits = torch.cat([x["start_logits"] for x in outputs])
+    #     end_logits = torch.cat([x["end_logits"] for x in outputs])
+    #     predictions = (start_logits, end_logits)
+
+    #     ids = [x["id"] for x in outputs]
+    #     id = list(chain(*ids))
+
+    #     preds = post_processing_function(id, predictions, self.tokenizer, "eval", self.cfg.path.train_path)
+    #     result = compute_metrics(preds)
+    #     self.log("test_em", result["exact_match"])
+    #     self.log("test_f1", result["f1"])
+
+    def predict_step(self, batch, batch_idx):
         data, id = batch
         start_logits, end_logits = self(data)
 
         return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
 
-    def test_epoch_end(self, outputs):
-        start_logits = torch.cat([x["start_logits"] for x in outputs])
-        end_logits = torch.cat([x["end_logits"] for x in outputs])
-        predictions = (start_logits, end_logits)
-
-        ids = [x["id"] for x in outputs]
-        id = list(chain(*ids))
-
-        preds = post_processing_function(id, predictions, self.tokenizer, "eval")
-        result = compute_metrics(preds)
-        self.log("test_em", result["exact_match"])
-        self.log("test_f1", result["f1"])
-
-    # def predict_step(self, batch, batch_idx):
-
-    #     start_logits, end_logits = self(batch)
-
-    #     preds = post_processing_function(self.predict_dataset[batch_idx], batch, logits, 'predict')
-
-    #     return preds
 
     def configure_optimizers(self):
         opt_module = getattr(import_module("torch.optim"), self.optimizer_name)

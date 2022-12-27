@@ -104,6 +104,7 @@ if __name__ == "__main__":
     sweep_id = wandb.sweep(
         sweep=sweep_config,  # config 딕셔너리를 추가합니다.
         project=cfg.wandb.wandb_project,  # project의 이름을 추가합니다.
+        entity = cfg.wamdb.wandb_entity
     )
     wandb.agent(
         sweep_id=sweep_id,  # sweep의 정보를 입력하고
