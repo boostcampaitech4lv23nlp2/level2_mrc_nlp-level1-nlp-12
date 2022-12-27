@@ -8,7 +8,7 @@ data:
     augmentation: # adea, bt 등등
     
 model:
-    model_name: klue/roberta-small
+    model_name: klue/roberta-large
     saved_name: base
 
 train:
@@ -34,7 +34,7 @@ fold:
     nums_folds: 5
 
 wandb:
-    wandb_username: rion_
+    wandb_username: daniel0801
     wandb_project: mrc_temp
     wandb_entity: mrc_et
 

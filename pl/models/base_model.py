@@ -79,24 +79,24 @@ class Model(pl.LightningModule):
         self.log("val_em", result["exact_match"])
         self.log("val_f1", result["f1"])
 
-    # def test_step(self, batch, batch_idx):
-    #     data, id = batch
-    #     start_logits, end_logits = self(data)
+    def test_step(self, batch, batch_idx):
+        data, id = batch
+        start_logits, end_logits = self(data)
 
-    #     return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
+        return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
 
-    # def test_epoch_end(self, outputs):
-    #     start_logits = torch.cat([x["start_logits"] for x in outputs])
-    #     end_logits = torch.cat([x["end_logits"] for x in outputs])
-    #     predictions = (start_logits, end_logits)
+    def test_epoch_end(self, outputs):
+        start_logits = torch.cat([x["start_logits"] for x in outputs])
+        end_logits = torch.cat([x["end_logits"] for x in outputs])
+        predictions = (start_logits, end_logits)
 
-    #     ids = [x["id"] for x in outputs]
-    #     id = list(chain(*ids))
+        ids = [x["id"] for x in outputs]
+        id = list(chain(*ids))
 
-    #     preds = post_processing_function(id, predictions, self.tokenizer, "eval", self.cfg.path.train_path)
-    #     result = compute_metrics(preds)
-    #     self.log("test_em", result["exact_match"])
-    #     self.log("test_f1", result["f1"])
+        preds = post_processing_function(id, predictions, self.tokenizer, "eval", self.cfg.path.train_path)
+        result = compute_metrics(preds)
+        self.log("test_em", result["exact_match"])
+        self.log("test_f1", result["f1"])
 
     def predict_step(self, batch, batch_idx):
         data, id = batch

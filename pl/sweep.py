@@ -93,7 +93,6 @@ if __name__ == "__main__":
         )
 
         trainer.fit(model=model, datamodule=dataloader)
-        # trainer.test(model=model, datamodule=dataloader)
         ck_dir_path = f"/opt/ml/input/code/pl/checkpoint/{model_name_ch}"
         if not os.path.exists(ck_dir_path):
             os.makedirs(ck_dir_path)
@@ -104,7 +103,7 @@ if __name__ == "__main__":
     sweep_id = wandb.sweep(
         sweep=sweep_config,  # config 딕셔너리를 추가합니다.
         project=cfg.wandb.wandb_project,  # project의 이름을 추가합니다.
-        entity = cfg.wamdb.wandb_entity
+        entity = cfg.wandb.wandb_entity
     )
     wandb.agent(
         sweep_id=sweep_id,  # sweep의 정보를 입력하고

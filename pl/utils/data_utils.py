@@ -182,8 +182,8 @@ def postprocess_qa_predictions(
     # example과 mapping되는 feature 생성
     example_id_to_index = {k: i for i, k in enumerate(examples["id"])}
     features_per_example = collections.defaultdict(list)
-    for i, feature in enumerate(features):
-        features_per_example[example_id_to_index[feature['example_id']]].append(i)
+    for i, feature in enumerate(id):
+        features_per_example[example_id_to_index[feature]].append(i)
 
     # prediction, nbest에 해당하는 OrderedDict 생성합니다.
     all_predictions = collections.OrderedDict()
@@ -326,7 +326,8 @@ def postprocess_qa_predictions(
 def post_processing_function(id, predictions, tokenizer, mode, path):
     # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
     if mode == "eval":
-        examples = load_from_disk(path)["validation"]
+        examples = load_from_disk(path)
+        examples = examples['validation']
         features = examples.map(
             prepare_validation_features,
             batched=True,
