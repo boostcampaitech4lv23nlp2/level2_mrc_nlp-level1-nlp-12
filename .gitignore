@@ -209,3 +209,4 @@ pl/ensemble/
 pl/inference_results/
 pl/lightning_logs/
 pl/wandb/
+pl/config/external_data_config.yaml
