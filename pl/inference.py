@@ -31,7 +31,7 @@ if __name__ == "__main__":
         cfg.train.seed,
     )
 
-    ckpt_path = "/opt/ml/input/code/pl/checkpoint/klue_roberta-small/epoch=1_val_loss=0.0000.ckpt"
+    ckpt_path = "/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=1_val_em=68.33.ckpt"
     # pt_path = "/opt/ml/input/code/pl/checkpoint/klue_roberta-large/klue_roberta-large_8_2.836701622995933e-05_12261501_model.pt"
 
     # for checkpoint
