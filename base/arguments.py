@@ -9,19 +9,19 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        default="/opt/ml/input/code/pl/checkpoint/klue_roberta-small/epoch=1_val_loss=0.0000.ckpt",
+        default="/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=1_val_em=68.33.ckpt",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
     )
     config_name: Optional[str] = field(
-        default=None,
+        default='klue/roberta-large',
         metadata={
             "help": "Pretrained config name or path if not the same as model_name"
         },
     )
     tokenizer_name: Optional[str] = field(
-        default=None,
+        default='klue/roberta-large',
         metadata={
             "help": "Pretrained tokenizer name or path if not the same as model_name"
         },

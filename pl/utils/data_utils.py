@@ -195,7 +195,7 @@ def postprocess_qa_predictions(
     for example_index, example in enumerate(tqdm(examples)):
         # 해당하는 현재 example index
         feature_indices = features_per_example[example_index]
-        min_null_prediction = 0
+        min_null_prediction = None
         prelim_predictions = []
 
         # 현재 example에 대한 모든 feature 생성합니다.
@@ -206,13 +206,13 @@ def postprocess_qa_predictions(
             # logit과 original context의 logit을 mapping합니다.
             offset_mapping = features[feature_index]["offset_mapping"]
             # Optional : `token_is_max_context`, 제공되는 경우 현재 기능에서 사용할 수 있는 max context가 없는 answer를 제거합니다
-            token_is_max_context = features[feature_index].get(
-                "token_is_max_context", 0
-            )
+            # token_is_max_context = features[feature_index].get(
+            #     "token_is_max_context", 0
+            # )
 
             # minimum null prediction을 업데이트 합니다.
             feature_null_score = start_logits[0] + end_logits[0]
-            if min_null_prediction == 0 or min_null_prediction["score"] > feature_null_score:
+            if min_null_prediction is None or min_null_prediction["score"] > feature_null_score:
                 min_null_prediction = {
                     "offsets": (0, 0),
                     "score": feature_null_score,
@@ -231,18 +231,19 @@ def postprocess_qa_predictions(
                     if (
                         start_index >= len(offset_mapping)
                         or end_index >= len(offset_mapping)
-                        or (offset_mapping[start_index] == 0 and offset_mapping[end_index] == 0)
+                        or offset_mapping[start_index] == [0, 0] 
+                        or  offset_mapping[end_index] == [0, 0]
                     ):
                         continue
                     # 길이가 < 0 또는 > max_answer_length인 answer도 고려하지 않습니다.
                     if end_index < start_index or end_index - start_index + 1 > max_answer_length:
                         continue
                     # 최대 context가 없는 answer도 고려하지 않습니다.
-                    if (
-                        token_is_max_context != 0
-                        and not token_is_max_context.get(str(start_index), False)
-                    ):
-                        continue
+                    # if (
+                    #     token_is_max_context != 0
+                    #     and not token_is_max_context.get(str(start_index), False)
+                    # ):
+                    #     continue
                     prelim_predictions.append(
                         {
                             "offsets": (
@@ -279,13 +280,13 @@ def postprocess_qa_predictions(
             predictions.insert(0, {"text": "empty", "start_logit": 0.0, "end_logit": 0.0, "score": 0.0})
 
         # 모든 점수의 소프트맥스를 계산합니다(we do it with numpy to stay independent from torch/tf in this file, using the LogSumExp trick).
-        # scores = np.array([pred.pop("score") for pred in predictions])
-        # exp_scores = np.exp(scores - np.max(scores))
-        # probs = exp_scores / exp_scores.sum()
+        scores = torch.tensor([pred.pop("score") for pred in predictions])
+        exp_scores = torch.exp(scores - torch.max(scores))
+        probs = exp_scores / exp_scores.sum()
 
         # # 예측값에 확률을 포함합니다.
-        # for prob, pred in zip(probs, predictions):
-        #     pred["probability"] = prob
+        for prob, pred in zip(probs, predictions):
+            pred["probability"] = prob
 
         # best prediction을 선택합니다.
         if not version_2_with_negative:
