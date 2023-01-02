@@ -1,5 +1,5 @@
 #!/bin/bash
-CONFIGS=("external_data_config")
+CONFIGS=("noun_adj_config")
 
 config_length=${#CONFIGS[@]}
 

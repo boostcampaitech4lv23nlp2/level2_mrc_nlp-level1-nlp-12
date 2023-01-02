@@ -4,8 +4,8 @@ import re
 
 from datetime import datetime, timedelta
 
-import pytorch_lightning as pl
 import torch
+import pytorch_lightning as pl
 import wandb
 
 from datamodule.base_data import *
@@ -14,6 +14,7 @@ from omegaconf import OmegaConf
 from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
+
 
 time_ = datetime.now() + timedelta(hours=9)
 time_now = time_.strftime("%m%d%H%M")
@@ -84,11 +85,12 @@ if __name__ == "__main__":
         logger=wandb_logger,  # W&B integration
         callbacks=[earlystopping, checkpoint_callback, RichProgressBar()],
         deterministic=True,
+        resume_from_checkpoint = "/opt/ml/input/code/pl/pl/checkpoint/klue_roberta-large/epoch=2_val_em=76.52.ckpt"
         # limit_train_batches=0.15,  # use only 15% of training data
         # limit_val_batches = 0.01, # use only 1% of val data
         # limit_train_batches=0.01    # use only 10 batches of training data
     )
-
+    
     trainer.fit(model=model, datamodule=dataloader)
     trainer.test(model=model, datamodule=dataloader, ckpt_path="best")
 
