@@ -9,7 +9,9 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        default="klue/roberta-small",
+        # default="klue/bert-base",
+        default="klue/roberta-large",
+        # default="klue/roberta-small",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
@@ -35,7 +37,9 @@ class DataTrainingArguments:
     """
 
     dataset_name: Optional[str] = field(
-        default="/opt/ml/input/data/train_dataset/",
+        default="/opt/ml/input/data/train_dataset",
+        # default="/opt/ml/input/data/noun_adj_aug_datasets",
+        # default="/opt/ml/input/data/data_wiki",
         metadata={"help": "The name of the dataset to use."},
     )
     overwrite_cache: bool = field(
@@ -43,7 +47,7 @@ class DataTrainingArguments:
         metadata={"help": "Overwrite the cached training and evaluation sets"},
     )
     preprocessing_num_workers: Optional[int] = field(
-        default=4,
+        default=None,
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
     max_seq_length: int = field(
@@ -89,4 +93,13 @@ class DataTrainingArguments:
     )
     use_faiss: bool = field(
         default=False, metadata={"help": "Whether to build with faiss"}
+    )
+    elastic: bool = field(
+        default=True, metadata={"help": "Whether to use Elasticsearch"}
+    )
+    index_name: str = field(
+        default="origin-wiki", metadata={"help": "Define the name if index when using Elasticsearch"}
+    )
+    bm25: bool = field(
+        default=True, metadata={"help": "Whether to use BM25"}
     )
