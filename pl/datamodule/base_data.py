@@ -53,7 +53,7 @@ class Dataloader(pl.LightningDataModule):
     Trainer에 들어갈 데이터셋을 호출
     """
 
-    def __init__(self, model_name, batch_size, shuffle, train_path, test_path, split_seed=42):
+    def __init__(self, model_name, batch_size, shuffle, train_path, test_path, split_seed, retrieval):
         super().__init__()
         self.model_name = model_name
         self.batch_size = batch_size
@@ -69,6 +69,7 @@ class Dataloader(pl.LightningDataModule):
         self.predict_dataset = None
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_name, max_length=200)
+        self.retrieval = retrieval
 
     def setup(self, stage="fit"):
         if stage == "fit":
@@ -110,7 +111,7 @@ class Dataloader(pl.LightningDataModule):
             # Inference에 사용될 데이터를 호출
             dataset = load_from_disk(self.test_path)
             dataset = run_sparse_retrieval(
-                self.tokenizer.tokenize, dataset, 'predict', False,
+                self.tokenizer.tokenize, dataset, 'predict', False, self.retrieval
             )
             column_names = dataset['validation'].column_names
 

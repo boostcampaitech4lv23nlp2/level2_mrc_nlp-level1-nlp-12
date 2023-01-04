@@ -38,4 +38,4 @@ wandb:
     wandb_project: mrc_temp
     wandb_entity: mrc_et
 
-retrieval: base
+retrieval: elastic # elastic, tf_idf, bm25

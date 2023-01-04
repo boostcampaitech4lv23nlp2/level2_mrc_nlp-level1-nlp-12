@@ -218,3 +218,5 @@ pl/config/noun_adj_config.yaml
 pl/environment.yaml
 pl/hugging.py
 pl/mlruns/
+pl/config/
+predictions/

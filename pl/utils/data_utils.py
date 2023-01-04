@@ -19,6 +19,8 @@ from tqdm.auto import tqdm
 from transformers import EvalPrediction
 from retrievals.base_retrieval import SparseRetrieval
 from retrievals.BM25 import BM25
+from retrievals.elastic_retrieval import ElasticRetrieval
+
 def prepare_train_features(examples, tokenizer):
     # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
     # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
@@ -326,7 +328,7 @@ def postprocess_qa_predictions(
     return all_predictions
 
 
-def post_processing_function(id, predictions, tokenizer, mode, path):
+def post_processing_function(id, predictions, tokenizer, mode, path, retrieval):
     # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
     if mode == "eval":
         examples = load_from_disk(path)
@@ -340,7 +342,11 @@ def post_processing_function(id, predictions, tokenizer, mode, path):
         )
     else:
         examples = load_from_disk(path)
-        examples = run_sparse_retrieval(tokenizer.tokenize, examples, 'predict', False)
+        examples = run_sparse_retrieval(tokenize_fn = tokenizer.tokenize, 
+                                        datasets = examples, 
+                                        mode = 'predict', 
+                                        use_faiss = False,
+                                        retrieval = retrieval)
         column_names = examples['validation'].column_names
         examples = examples['validation']
         features = examples.map(
@@ -372,14 +378,20 @@ def run_sparse_retrieval(
     datasets,
     mode,
     use_faiss,
+    retrieval,
     data_path: str = "../../data",
     context_path: str = "wikipedia_documents.json",
 ):
 
     # Query에 맞는 Passage들을 Retrieval 합니다.
-    # retriever = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
-    retriever = BM25(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
-    retriever.get_sparse_embedding()
+    if retrieval == "elastic":
+        retriever = ElasticRetrieval('origin_wiki')
+    else:
+        if retrieval == "tf_idf":
+            retriever = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+        elif retrieval == "bm25":
+            retriever = BM25(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+        retriever.get_sparse_embedding()
 
     if use_faiss:
         retriever.build_faiss(num_clusters=64)
@@ -388,7 +400,7 @@ def run_sparse_retrieval(
         )
     else:
         df = retriever.retrieve(datasets["validation"], topk=40)
-        df.drop(columns = ['context_id'], inplace=True)
+    df.drop(columns = ['context_id'], inplace=True)
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
     if mode=='predict':
         f = Features(

@@ -29,17 +29,18 @@ if __name__ == "__main__":
         cfg.path.train_path,
         cfg.path.test_path,
         cfg.train.seed,
+        cfg.retrieval,
     )
 
-    ckpt_path = "/opt/ml/input/code/pl/output/klue_roberta-large/epoch=3_val_em=70.00_korquad.ckpt"
-    # pt_path = "/opt/ml/input/code/pl/output/klue_roberta-large_01031512_model.pt"
+    # ckpt_path = "/opt/ml/input/code/pl/output/klue_roberta-large/epoch=3_val_em=70.00_korquad.ckpt"
+    pt_path = "/opt/ml/input/code/pl/output/klue_roberta-large_12281704_model.pt"
 
     # for checkpoint
-    model = Model(cfg).load_from_checkpoint(checkpoint_path=ckpt_path)
+    # model = Model(cfg).load_from_checkpoint(checkpoint_path=ckpt_path)
 
     # for pt
-    # model = Model(cfg)
-    # model.load_state_dict(torch.load(pt_path))
+    model = Model(cfg)
+    model.load_state_dict(torch.load(pt_path))
 
     # gpu가 없으면 'gpus=0'을, gpu가 여러개면 'gpus=4'처럼 사용하실 gpu의 개수를 입력해주세요
     trainer = pl.Trainer(
@@ -56,6 +57,6 @@ if __name__ == "__main__":
     predictions = (start_logits, end_logits)
     ids = [x["id"] for x in outputs]
     id = list(chain(*ids))
-    preds = post_processing_function(id, predictions, transformers.AutoTokenizer.from_pretrained(cfg.model.model_name), "predict", cfg.path.test_path)
+    preds = post_processing_function(id, predictions, transformers.AutoTokenizer.from_pretrained(cfg.model.model_name), "predict", cfg.path.test_path, cfg.retrieval)
 
     print("---- Finish ----")
