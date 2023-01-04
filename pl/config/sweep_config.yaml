@@ -35,7 +35,7 @@ fold:
 sweep:
     method: bayes
     lr_min: 1e-6
-    lr_max: 1e-4
+    lr_max: 1e-5
     name: klue/roberta-large
     count: 5
 
