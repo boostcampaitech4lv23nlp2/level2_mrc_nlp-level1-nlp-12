@@ -34,7 +34,7 @@ fold:
     nums_folds: 5
 
 wandb:
-    wandb_username: daniel0801
+    wandb_username: seokhee
     wandb_project: mrc_temp
     wandb_entity: mrc_et
 
