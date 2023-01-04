@@ -1,14 +1,15 @@
 path:
-    train_path: /opt/ml/input/data/train_dataset/
+    train_path: /opt/ml/input/data/train_dataset/cur_learn/
     test_path: /opt/ml/input/data/test_dataset/
+    output_path: /opt/ml/input/code/predictions
 
 data:
-    shuffle: True
+    shuffle: False
     augmentation: # adea, bt 등등
     
 model:
-    model_name: klue/roberta-small
-    saved_name: roberta-small
+    model_name: klue/roberta-large
+    saved_name: base
 
 train:
     seed: 42
@@ -32,14 +33,8 @@ fold:
     fold: False
     nums_folds: 5
 
-sweep:
-    method: bayes
-    lr_min: 1e-6
-    lr_max: 1e-4
-    name: klue/roberta-large
-    count: 5
-
 wandb:
     wandb_username: daniel0801
     wandb_project: mrc_temp
     wandb_entity: mrc_et
+

@@ -61,13 +61,13 @@ class SparseRetrieval:
 
         # Transform by vectorizer
         self.tfidfv = TfidfVectorizer(
-            tokenizer=tokenize_fn, ngram_range=(1, 2), max_features=50000,
+            tokenizer=tokenize_fn, ngram_range=(1, 3), max_features=50000,
         )
 
         self.p_embedding = None  # get_sparse_embedding()로 생성합니다
         self.indexer = None  # build_faiss()로 생성합니다.
 
-    def get_sparse_embedding(self) -> NoReturn:
+    def get_sparse_embedding(self):
 
         """
         Summary:
@@ -98,7 +98,7 @@ class SparseRetrieval:
                 pickle.dump(self.tfidfv, file)
             print("Embedding pickle saved.")
 
-    def build_faiss(self, num_clusters=64) -> NoReturn:
+    def build_faiss(self, num_clusters=64):
 
         """
         Summary:

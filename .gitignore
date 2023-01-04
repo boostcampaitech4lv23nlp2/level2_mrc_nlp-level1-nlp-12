@@ -20,6 +20,8 @@ wandb
 nohup.out
 arrow_to_csv.ipynb
 re_temp
+mrc_temp
+cur_lern.ipynb
 # Distribution / packaging
 .Python
 build/
