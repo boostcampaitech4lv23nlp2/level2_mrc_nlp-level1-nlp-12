@@ -1,5 +1,5 @@
 path:
-    train_path: /opt/ml/input/data/train_dataset/
+    train_path: /opt/ml/input/data/train_dataset/data_wiki_korquad_ver2/
     test_path: /opt/ml/input/data/test_dataset/
     output_path: /opt/ml/input/code/predictions
 
@@ -9,13 +9,13 @@ data:
     
 model:
     model_name: klue/roberta-large
-    saved_name: base
+    saved_name: korquad
 
 train:
     seed: 42
     gpus: 1
     batch_size: 16
-    max_epoch: 10
+    max_epoch: 1
     logging_step: 1
     
 optimizer:
@@ -38,4 +38,3 @@ wandb:
     wandb_project: mrc_temp
     wandb_entity: mrc_et
 
-retrieval: base

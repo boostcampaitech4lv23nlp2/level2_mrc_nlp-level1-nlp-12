@@ -1,10 +1,10 @@
 path:
-    train_path: /opt/ml/input/data/train_dataset/
+    train_path: /opt/ml/input/data/train_dataset/cur_learn/
     test_path: /opt/ml/input/data/test_dataset/
     output_path: /opt/ml/input/code/predictions
 
 data:
-    shuffle: True
+    shuffle: False
     augmentation: # adea, bt 등등
     
 model:
@@ -38,4 +38,3 @@ wandb:
     wandb_project: mrc_temp
     wandb_entity: mrc_et
 
-retrieval: base

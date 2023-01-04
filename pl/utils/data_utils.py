@@ -18,6 +18,7 @@ from datasets import (
 from tqdm.auto import tqdm
 from transformers import EvalPrediction
 from retrievals.base_retrieval import SparseRetrieval
+from retrievals.BM25 import BM25
 def prepare_train_features(examples, tokenizer):
     # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
     # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
@@ -280,13 +281,14 @@ def postprocess_qa_predictions(
             predictions.insert(0, {"text": "empty", "start_logit": 0.0, "end_logit": 0.0, "score": 0.0})
 
         # 모든 점수의 소프트맥스를 계산합니다(we do it with numpy to stay independent from torch/tf in this file, using the LogSumExp trick).
-        scores = torch.tensor([pred.pop("score") for pred in predictions])
-        exp_scores = torch.exp(scores - torch.max(scores))
-        probs = exp_scores / exp_scores.sum()
+        if mode == 'predict':
+            scores = torch.tensor([pred.pop("score") for pred in predictions])
+            exp_scores = torch.exp(scores - torch.max(scores))
+            probs = exp_scores / exp_scores.sum()
 
-        # # 예측값에 확률을 포함합니다.
-        for prob, pred in zip(probs, predictions):
-            pred["probability"] = prob
+        # # # # 예측값에 확률을 포함합니다.
+            for prob, pred in zip(probs, predictions):
+                pred["probability"] = prob
 
         # best prediction을 선택합니다.
         if not version_2_with_negative:
@@ -375,17 +377,18 @@ def run_sparse_retrieval(
 ):
 
     # Query에 맞는 Passage들을 Retrieval 합니다.
-    retriever = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+    # retriever = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+    retriever = BM25(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
     retriever.get_sparse_embedding()
 
     if use_faiss:
         retriever.build_faiss(num_clusters=64)
         df = retriever.retrieve_faiss(
-            datasets["validation"], topk=10
+            datasets["validation"], topk=40
         )
     else:
-        df = retriever.retrieve(datasets["validation"], topk=10)
-
+        df = retriever.retrieve(datasets["validation"], topk=40)
+        df.drop(columns = ['context_id'], inplace=True)
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
     if mode=='predict':
         f = Features(

@@ -31,8 +31,8 @@ if __name__ == "__main__":
         cfg.train.seed,
     )
 
-    ckpt_path = "/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=1_val_em=68.33.ckpt"
-    # pt_path = "/opt/ml/input/code/pl/checkpoint/klue_roberta-large/klue_roberta-large_8_2.836701622995933e-05_12261501_model.pt"
+    ckpt_path = "/opt/ml/input/code/pl/output/klue_roberta-large/epoch=3_val_em=70.00_korquad.ckpt"
+    # pt_path = "/opt/ml/input/code/pl/output/klue_roberta-large_01031512_model.pt"
 
     # for checkpoint
     model = Model(cfg).load_from_checkpoint(checkpoint_path=ckpt_path)

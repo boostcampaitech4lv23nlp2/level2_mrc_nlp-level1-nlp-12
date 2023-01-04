@@ -9,19 +9,19 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        default="/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=1_val_em=68.33.ckpt",
+        default="klue/roberta-large",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
     )
     config_name: Optional[str] = field(
-        default='klue/roberta-large',
+        default=None,
         metadata={
             "help": "Pretrained config name or path if not the same as model_name"
         },
     )
     tokenizer_name: Optional[str] = field(
-        default='klue/roberta-large',
+        default=None,
         metadata={
             "help": "Pretrained tokenizer name or path if not the same as model_name"
         },
@@ -35,7 +35,7 @@ class DataTrainingArguments:
     """
 
     dataset_name: Optional[str] = field(
-        default="/opt/ml/input/data/train_dataset/",
+        default="/opt/ml/input/data/train_dataset/cur_learn/",
         metadata={"help": "The name of the dataset to use."},
     )
     overwrite_cache: bool = field(
