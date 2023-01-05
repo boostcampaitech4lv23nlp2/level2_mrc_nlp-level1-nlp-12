@@ -52,7 +52,7 @@ sudo install curl
 curl "localhost:9200"
 ~~~
 2. `install_requierments.sh` 실행하여 elasticsearch 설치
-3. `elastic_setting.py` 실행
+3. retrievals 폴더에서 `python elastic_setting.py` 실행
 4. config 파일에서 `retrieval: elastic` 설정 확인 후 `inference.py` 실행
 
 ## version 1.4.0
