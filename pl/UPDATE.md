@@ -1,4 +1,8 @@
 # UPDATE
+## version 1.5.0
+* BM-25, ElasticSearch
+  * Retrievals 추가, pl_inference 추가
+* Shap 추가 
 
 ## version 1.4.0
 * Tune 
