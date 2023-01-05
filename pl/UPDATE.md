@@ -3,6 +3,8 @@
 * BM-25, ElasticSearch
   * Retrievals 추가, pl_inference 추가
 * Shap 추가 
+* Elastic 환경 설정 방법
+* 
 
 ## version 1.4.0
 * Tune 
