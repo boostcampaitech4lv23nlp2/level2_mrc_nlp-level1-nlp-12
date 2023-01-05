@@ -1,6 +1,7 @@
 path:
-    train_path: /opt/ml/input/data/train_dataset/
+    train_path: /opt/ml/input/data/train_dataset/cur_learn/
     test_path: /opt/ml/input/data/test_dataset/
+    output_path: /opt/ml/input/code/predictions
 
 data:
     shuffle: True
@@ -35,9 +36,9 @@ fold:
 sweep:
     method: bayes
     lr_min: 1e-6
-    lr_max: 1e-5
+    lr_max: 1e-4
     name: klue/roberta-large
-    count: 5
+    count: 20
 
 wandb:
     wandb_username: daniel0801

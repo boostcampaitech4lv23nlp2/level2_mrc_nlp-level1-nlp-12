@@ -1,5 +1,5 @@
 #!/bin/bash
-CONFIGS=("base_config")
+CONFIGS=("sweep1" "sweep2" "sweep3" "sweep4" "sweep5" "sweep6")
 
 config_length=${#CONFIGS[@]}
 

@@ -11,7 +11,7 @@ import wandb
 from datamodule.base_data import *
 from models.base_model import *
 from omegaconf import OmegaConf
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
@@ -48,16 +48,22 @@ if __name__ == "__main__":
                 "min": cfg.sweep.lr_min,  # 최소값을 설정합니다.
                 "max": cfg.sweep.lr_max,  # 최대값을 설정합니다.
             },
-            "batch_size": {"values": [8, 16]},
+            "batch_size": {"values": [16]},
         },
         "name": cfg.sweep.name,
         "metric": {"name": "val_em", "goal": "maximize"},
         "entity": cfg.wandb.wandb_entity,
         "project": cfg.wandb.wandb_project,
     }
-
+    ck_dir_path = f"/opt/ml/input/code/pl/checkpoint/{model_name_ch}"
+    if not os.path.exists(ck_dir_path):
+        os.makedirs(ck_dir_path)
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_em", save_top_k=1, save_last=True, save_weights_only=True, verbose=False, mode="max"
+        dirpath=ck_dir_path,
+        filename="{epoch}_{val_em:.2f}_korquad",
+        monitor="val_em",
+        save_top_k=1,
+        mode="max",
     )
 
     # Earlystopping
@@ -68,16 +74,17 @@ if __name__ == "__main__":
         config = wandb.config
 
         dataloader = Dataloader(
-            cfg.model.model_name,
-            config.batch_size,
-            cfg.data.shuffle,
-            cfg.path.train_path,
-            cfg.train.seed,
-            cfg.path.test_path,
+        cfg.model.model_name,
+        cfg.train.batch_size,
+        cfg.data.shuffle,
+        cfg.path.train_path,
+        cfg.path.test_path,
+        cfg.train.seed,
         )
+        ckpt_path='/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=0_val_em=80.61.ckpt'
         cfg.optimizer.learning_rate = config.lr
         cfg.train.batch_size = config.batch_size
-        model = Model(cfg)
+        model = Model(cfg).load_from_checkpoint(checkpoint_path=ckpt_path)
         wandb_logger = WandbLogger(
             log_model="all",
             name=f"{cfg.model.saved_name}_{cfg.train.batch_size}_{cfg.optimizer.learning_rate}_{time_now}",
@@ -85,12 +92,19 @@ if __name__ == "__main__":
             entity=cfg.wandb.wandb_entity,
         )
         trainer = pl.Trainer(
-            gpus=1,
-            max_epochs=10,
-            log_every_n_steps=5,
-            logger=wandb_logger,
-            callbacks=[checkpoint_callback, earlystopping],
-        )
+        precision=16,
+        accelerator="gpu",
+        devices=1,
+        max_epochs=cfg.train.max_epoch,
+        log_every_n_steps=cfg.train.logging_step,
+        logger=wandb_logger,  # W&B integration
+        callbacks=[earlystopping, checkpoint_callback, RichProgressBar()],
+        deterministic=True,
+        # resume_from_checkpoint='/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=0_val_em=80.61.ckpt'
+        # limit_train_batches=0.15,  # use only 15% of training data
+        # limit_val_batches = 0.01, # use only 1% of val data
+        # limit_train_batches=0.01    # use only 10 batches of training data
+    )
 
         trainer.fit(model=model, datamodule=dataloader)
         ck_dir_path = f"/opt/ml/input/code/pl/checkpoint/{model_name_ch}"
