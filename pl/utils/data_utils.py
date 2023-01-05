@@ -5,10 +5,21 @@ from typing import Any, Tuple
 import numpy as np
 import torch
 import transformers
-
-from datasets import load_from_disk
+import os
+import json
+from datasets import (
+    Dataset,
+    DatasetDict,
+    Features,
+    Sequence,
+    Value,
+    load_from_disk,
+)
 from tqdm.auto import tqdm
 from transformers import EvalPrediction
+from retrievals.base_retrieval import SparseRetrieval
+from retrievals.BM25 import BM25
+from retrievals.elastic_retrieval import ElasticRetrieval
 
 def prepare_train_features(examples, tokenizer):
     # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
@@ -126,9 +137,11 @@ def postprocess_qa_predictions(
     features,
     id,
     predictions: Tuple[np.ndarray, np.ndarray],
+    output_dir = None,
     version_2_with_negative: bool = False,
     n_best_size: int = 20,
     max_answer_length: int = 30,
+    mode = 'eval',
     null_score_diff_threshold: float = 0.0,
 ):
     """
@@ -185,8 +198,7 @@ def postprocess_qa_predictions(
     for example_index, example in enumerate(tqdm(examples)):
         # 해당하는 현재 example index
         feature_indices = features_per_example[example_index]
-
-        min_null_prediction = 0
+        min_null_prediction = None
         prelim_predictions = []
 
         # 현재 example에 대한 모든 feature 생성합니다.
@@ -195,7 +207,7 @@ def postprocess_qa_predictions(
             start_logits = all_start_logits[feature_index]
             end_logits = all_end_logits[feature_index]
             # logit과 original context의 logit을 mapping합니다.
-            offset_mapping = features["offset_mapping"][feature_index]
+            offset_mapping = features[feature_index]["offset_mapping"]
             # Optional : `token_is_max_context`, 제공되는 경우 현재 기능에서 사용할 수 있는 max context가 없는 answer를 제거합니다
             # token_is_max_context = features[feature_index].get(
             #     "token_is_max_context", 0
@@ -203,7 +215,7 @@ def postprocess_qa_predictions(
 
             # minimum null prediction을 업데이트 합니다.
             feature_null_score = start_logits[0] + end_logits[0]
-            if min_null_prediction == 0 or min_null_prediction["score"] > feature_null_score:
+            if min_null_prediction is None or min_null_prediction["score"] > feature_null_score:
                 min_null_prediction = {
                     "offsets": (0, 0),
                     "score": feature_null_score,
@@ -222,8 +234,8 @@ def postprocess_qa_predictions(
                     if (
                         start_index >= len(offset_mapping)
                         or end_index >= len(offset_mapping)
-                        or offset_mapping[start_index] is 0
-                        or offset_mapping[end_index] is 0
+                        or offset_mapping[start_index] == [0, 0] 
+                        or  offset_mapping[end_index] == [0, 0]
                     ):
                         continue
                     # 길이가 < 0 또는 > max_answer_length인 answer도 고려하지 않습니다.
@@ -231,7 +243,7 @@ def postprocess_qa_predictions(
                         continue
                     # 최대 context가 없는 answer도 고려하지 않습니다.
                     # if (
-                    #     token_is_max_context is not 0
+                    #     token_is_max_context != 0
                     #     and not token_is_max_context.get(str(start_index), False)
                     # ):
                     #     continue
@@ -271,13 +283,14 @@ def postprocess_qa_predictions(
             predictions.insert(0, {"text": "empty", "start_logit": 0.0, "end_logit": 0.0, "score": 0.0})
 
         # 모든 점수의 소프트맥스를 계산합니다(we do it with numpy to stay independent from torch/tf in this file, using the LogSumExp trick).
-        # scores = np.array([pred.pop("score") for pred in predictions])
-        # exp_scores = np.exp(scores - np.max(scores))
-        # probs = exp_scores / exp_scores.sum()
+        if mode == 'predict':
+            scores = torch.tensor([pred.pop("score") for pred in predictions])
+            exp_scores = torch.exp(scores - torch.max(scores))
+            probs = exp_scores / exp_scores.sum()
 
-        # # 예측값에 확률을 포함합니다.
-        # for prob, pred in zip(probs, predictions):
-        #     pred["probability"] = prob
+        # # # # 예측값에 확률을 포함합니다.
+            for prob, pred in zip(probs, predictions):
+                pred["probability"] = prob
 
         # best prediction을 선택합니다.
         if not version_2_with_negative:
@@ -302,14 +315,24 @@ def postprocess_qa_predictions(
             {k: (float(v) if isinstance(v, (np.float16, np.float32, np.float64)) else v) for k, v in pred.items()}
             for pred in predictions
         ]
-
+    if mode == 'predict':
+        output_dir = '/opt/ml/input/code/predictions'
+        prediction_file = os.path.join(
+            output_dir,
+            "predictions.json",
+        )
+        with open(prediction_file, "w", encoding="utf-8") as writer:
+            writer.write(
+                json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n"
+            )
     return all_predictions
 
 
-def post_processing_function(id, predictions, tokenizer, mode):
+def post_processing_function(id, predictions, tokenizer, mode, path, retrieval):
     # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
     if mode == "eval":
-        examples = load_from_disk("/opt/ml/input/data/train_dataset/")["validation"]
+        examples = load_from_disk(path)
+        examples = examples['validation']
         features = examples.map(
             prepare_validation_features,
             batched=True,
@@ -318,21 +341,28 @@ def post_processing_function(id, predictions, tokenizer, mode):
             fn_kwargs={"tokenizer": tokenizer},
         )
     else:
-        examples = load_from_disk("/opt/ml/input/data/test_dataset/")["validation"]
+        examples = load_from_disk(path)
+        examples = run_sparse_retrieval(tokenize_fn = tokenizer.tokenize, 
+                                        datasets = examples, 
+                                        mode = 'predict', 
+                                        use_faiss = False,
+                                        retrieval = retrieval)
+        column_names = examples['validation'].column_names
+        examples = examples['validation']
         features = examples.map(
             prepare_validation_features,
             batched=True,
             num_proc=4,
-            remove_columns=examples.column_names,
+            remove_columns=column_names,
             fn_kwargs={"tokenizer": tokenizer},
         )
-
     predictions = postprocess_qa_predictions(
         examples=examples,
         features=features,
         id=id,
         predictions=predictions,
         max_answer_length=100,
+        mode=mode,
     )
     # Metric을 구할 수 있도록 Format을 맞춰줍니다.
     formatted_predictions = [{"id": k, "prediction_text": v} for k, v in predictions.items()]
@@ -342,3 +372,61 @@ def post_processing_function(id, predictions, tokenizer, mode):
     elif mode == "eval":
         references = [{"id": ex["id"], "answers": ex["answers"]} for ex in examples]
         return EvalPrediction(predictions=formatted_predictions, label_ids=references)
+
+def run_sparse_retrieval(
+    tokenize_fn,
+    datasets,
+    mode,
+    use_faiss,
+    retrieval,
+    data_path: str = "../../data",
+    context_path: str = "wikipedia_documents.json",
+):
+
+    # Query에 맞는 Passage들을 Retrieval 합니다.
+    if retrieval == "elastic":
+        retriever = ElasticRetrieval('origin_wiki')
+    else:
+        if retrieval == "tf_idf":
+            retriever = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+        elif retrieval == "bm25":
+            retriever = BM25(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+        retriever.get_sparse_embedding()
+
+    if use_faiss:
+        retriever.build_faiss(num_clusters=64)
+        df = retriever.retrieve_faiss(
+            datasets["validation"], topk=40
+        )
+    else:
+        df = retriever.retrieve(datasets["validation"], topk=40)
+    df.drop(columns = ['context_id'], inplace=True)
+    # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
+    if mode=='predict':
+        f = Features(
+            {
+                "context": Value(dtype="string", id=None),
+                "id": Value(dtype="string", id=None),
+                "question": Value(dtype="string", id=None),
+            }
+        )
+
+    # train data 에 대해선 정답이 존재하므로 id question context answer 로 데이터셋이 구성됩니다.
+    elif mode == 'eval':
+        f = Features(
+            {
+                "answers": Sequence(
+                    feature={
+                        "text": Value(dtype="string", id=None),
+                        "answer_start": Value(dtype="int32", id=None),
+                    },
+                    length=-1,
+                    id=None,
+                ),
+                "context": Value(dtype="string", id=None),
+                "id": Value(dtype="string", id=None),
+                "question": Value(dtype="string", id=None),
+            }
+        )
+    datasets = DatasetDict({"validation": Dataset.from_pandas(df, features=f)})
+    return datasets

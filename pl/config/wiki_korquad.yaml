@@ -1,5 +1,5 @@
 path:
-    train_path: /opt/ml/input/data/train_dataset/
+    train_path: /opt/ml/input/data/train_dataset/data_wiki_korquad_ver2/
     test_path: /opt/ml/input/data/test_dataset/
     output_path: /opt/ml/input/code/predictions
 
@@ -9,17 +9,17 @@ data:
     
 model:
     model_name: klue/roberta-large
-    saved_name: base
+    saved_name: korquad
 
 train:
     seed: 42
     gpus: 1
     batch_size: 16
-    max_epoch: 10
+    max_epoch: 1
     logging_step: 1
     
 optimizer:
-    learning_rate: 0.000048666899101127755
+    learning_rate: 1e-5
     optimizer_name: AdamW
     lr_weight_decay: False
     lr_decay_step: 20
@@ -34,8 +34,7 @@ fold:
     nums_folds: 5
 
 wandb:
-    wandb_username: seokhee
+    wandb_username: daniel0801
     wandb_project: mrc_temp
     wandb_entity: mrc_et
 
-retrieval: elastic # elastic, tf_idf, bm25

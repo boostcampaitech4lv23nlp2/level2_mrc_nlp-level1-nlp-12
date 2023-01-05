@@ -13,7 +13,6 @@ from datasets import load_from_disk
 from tqdm.auto import tqdm
 from utils.data_utils import *
 from utils.util import *
-
 class Train_Dataset(torch.utils.data.Dataset):
     """Dataset 구성을 위한 Class"""
 
@@ -54,7 +53,7 @@ class Dataloader(pl.LightningDataModule):
     Trainer에 들어갈 데이터셋을 호출
     """
 
-    def __init__(self, model_name, batch_size, shuffle, train_path, test_path, split_seed=42):
+    def __init__(self, model_name, batch_size, shuffle, train_path, test_path, split_seed, retrieval):
         super().__init__()
         self.model_name = model_name
         self.batch_size = batch_size
@@ -70,6 +69,7 @@ class Dataloader(pl.LightningDataModule):
         self.predict_dataset = None
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_name, max_length=200)
+        self.retrieval = retrieval
 
     def setup(self, stage="fit"):
         if stage == "fit":
@@ -109,17 +109,21 @@ class Dataloader(pl.LightningDataModule):
 
         if stage == "predict":
             # Inference에 사용될 데이터를 호출
-            p_data = load_from_disk(self.test_path)
+            dataset = load_from_disk(self.test_path)
+            dataset = run_sparse_retrieval(
+                self.tokenizer.tokenize, dataset, 'predict', False, self.retrieval
+            )
+            column_names = dataset['validation'].column_names
 
-            tokenized_p = p_data.map(
+            tokenized_p = dataset.map(
                 prepare_validation_features,
                 batched=True,
                 num_proc=4,
-                remove_columns=p_data["validation"].column_names,
+                remove_columns=column_names,
                 fn_kwargs={"tokenizer": self.tokenizer},
             )
 
-            self.predict_dataset = tokenized_p
+            self.predict_dataset = Val_Dataset(tokenized_p['validation'])
 
     def train_dataloader(self):
         return torch.utils.data.DataLoader(

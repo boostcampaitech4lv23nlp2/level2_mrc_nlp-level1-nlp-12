@@ -20,6 +20,8 @@ wandb
 nohup.out
 arrow_to_csv.ipynb
 re_temp
+mrc_temp
+cur_lern.ipynb
 # Distribution / packaging
 .Python
 build/
@@ -209,3 +211,12 @@ pl/ensemble/
 pl/inference_results/
 pl/lightning_logs/
 pl/wandb/
+mlruns/
+pl/MLProject
+pl/config/external_data_config.yaml
+pl/config/noun_adj_config.yaml
+pl/environment.yaml
+pl/hugging.py
+pl/mlruns/
+pl/config/
+predictions/

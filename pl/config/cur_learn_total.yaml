@@ -1,10 +1,10 @@
 path:
-    train_path: /opt/ml/input/data/train_dataset/
+    train_path: /opt/ml/input/data/train_dataset/cur_learn/
     test_path: /opt/ml/input/data/test_dataset/
     output_path: /opt/ml/input/code/predictions
 
 data:
-    shuffle: True
+    shuffle: False
     augmentation: # adea, bt 등등
     
 model:
@@ -19,7 +19,7 @@ train:
     logging_step: 1
     
 optimizer:
-    learning_rate: 0.000048666899101127755
+    learning_rate: 1e-5
     optimizer_name: AdamW
     lr_weight_decay: False
     lr_decay_step: 20
@@ -34,8 +34,7 @@ fold:
     nums_folds: 5
 
 wandb:
-    wandb_username: seokhee
+    wandb_username: daniel0801
     wandb_project: mrc_temp
     wandb_entity: mrc_et
 
-retrieval: elastic # elastic, tf_idf, bm25
