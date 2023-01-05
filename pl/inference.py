@@ -32,15 +32,15 @@ if __name__ == "__main__":
         cfg.retrieval,
     )
 
-    # ckpt_path = "/opt/ml/input/code/pl/output/klue_roberta-large/epoch=3_val_em=70.00_korquad.ckpt"
-    pt_path = "/opt/ml/input/code/pl/output/klue_roberta-large_12281704_model.pt"
+    ckpt_path = "/opt/ml/input/code/pl/output/epoch=4_val_em=72.08_korquad.ckpt"
+    # pt_path = "/opt/ml/input/code/pl/output/klue_roberta-large_12281704_model.pt"
 
     # for checkpoint
-    # model = Model(cfg).load_from_checkpoint(checkpoint_path=ckpt_path)
+    model = Model(cfg).load_from_checkpoint(checkpoint_path=ckpt_path)
 
     # for pt
-    model = Model(cfg)
-    model.load_state_dict(torch.load(pt_path))
+    # model = Model(cfg)
+    # model.load_state_dict(torch.load(pt_path))
 
     # gpu가 없으면 'gpus=0'을, gpu가 여러개면 'gpus=4'처럼 사용하실 gpu의 개수를 입력해주세요
     trainer = pl.Trainer(
