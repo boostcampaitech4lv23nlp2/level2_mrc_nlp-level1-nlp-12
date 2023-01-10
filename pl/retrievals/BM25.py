@@ -23,7 +23,7 @@ class Retrieval:
     def __init__(
         self,
         tokenize_fn,
-        data_path: Optional[str] = "../data/",
+        data_path: Optional[str] = "/opt/ml/input/data/",
         context_path: Optional[str] = "wikipedia_documents.json",
     ):
         self.data_path = data_path
@@ -69,9 +69,9 @@ class Retrieval:
                     "id": example["id"],
                     # Retrieve한 Passage의 id, context를 반환합니다.
                     "context_id": doc_indices[idx],
-                    "context": " ".join(
+                    "context": 
                         [self.contexts[pid] for pid in doc_indices[idx]]
-                    ),
+                    
                 }
                 if "context" in example.keys() and "answers" in example.keys():
                     # validation 데이터를 사용하면 ground_truth context와 answer도 반환합니다.
@@ -92,7 +92,7 @@ class Retrieval:
 class BM25(Retrieval):
     def __init__(
         self, tokenize_fn,
-        data_path: Optional[str] = "../data/", 
+        data_path: Optional[str] = "/opt/ml/input/data/", 
         context_path: Optional[str] = "wikipedia_documents.json"
     ):
         super().__init__(tokenize_fn, data_path, context_path)
