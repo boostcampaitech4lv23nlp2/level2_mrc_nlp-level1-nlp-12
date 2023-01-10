@@ -1,13 +1,15 @@
 import argparse
-from datamodule.en_data import *
+import json
+import os
+import re
+
+from datamodule.base_data import *
+from models.base_model import *
+from omegaconf import OmegaConf
+from retrievals.base_retrieval import SparseRetrieval
 from utils.data_utils import *
 from utils.util import *
-from omegaconf import OmegaConf
-from models.base_model import *
-from retrievals.base_retrieval import SparseRetrieval
-import os
-import json
-import re
+
 if __name__ == "__main__":
     # 하이퍼 파라미터 등 각종 설정값을 입력받습니다
     # 터미널 실행 예시 : python3 run.py --batch_size=64 ...
@@ -18,7 +20,6 @@ if __name__ == "__main__":
 
     cfg = OmegaConf.load(f"/opt/ml/input/code/pl/config/{args.config}.yaml")
     pl.seed_everything(cfg.train.seed, workers=True)
-
 
     # dataloader와 model을 생성합니다.
     dataloader = Dataloader(
@@ -56,6 +57,13 @@ if __name__ == "__main__":
     predictions = (start_logits, end_logits)
     ids = [x["id"] for x in outputs]
     id = list(chain(*ids))
-    preds = post_processing_function(id, predictions, transformers.AutoTokenizer.from_pretrained(cfg.model.model_name), "predict", cfg.path.test_path, cfg.retrieval)
+    preds = post_processing_function(
+        id,
+        predictions,
+        transformers.AutoTokenizer.from_pretrained(cfg.model.model_name),
+        "predict",
+        cfg.path.test_path,
+        cfg.retrieval,
+    )
 
     print("---- Finish ----")

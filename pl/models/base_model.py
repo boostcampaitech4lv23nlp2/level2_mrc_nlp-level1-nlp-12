@@ -104,7 +104,6 @@ class Model(pl.LightningModule):
 
         return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
 
-
     def configure_optimizers(self):
         opt_module = getattr(import_module("torch.optim"), self.optimizer_name)
         if self.lr_weight_decay:

@@ -13,6 +13,7 @@ from datasets import load_from_disk
 from tqdm.auto import tqdm
 from utils.data_utils import *
 from utils.util import *
+
 class Train_Dataset(torch.utils.data.Dataset):
     """Dataset 구성을 위한 Class"""
 
@@ -110,10 +111,8 @@ class Dataloader(pl.LightningDataModule):
         if stage == "predict":
             # Inference에 사용될 데이터를 호출
             dataset = load_from_disk(self.test_path)
-            dataset = run_sparse_retrieval(
-                self.tokenizer.tokenize, dataset, 'predict', False, self.retrieval
-            )
-            column_names = dataset['validation'].column_names
+            dataset = run_sparse_retrieval(self.tokenizer.tokenize, dataset, "predict", False, self.retrieval)
+            column_names = dataset["validation"].column_names
 
             tokenized_p = dataset.map(
                 prepare_validation_features,
@@ -123,7 +122,7 @@ class Dataloader(pl.LightningDataModule):
                 fn_kwargs={"tokenizer": self.tokenizer},
             )
 
-            self.predict_dataset = Val_Dataset(tokenized_p['validation'])
+            self.predict_dataset = Val_Dataset(tokenized_p["validation"])
 
     def train_dataloader(self):
         return torch.utils.data.DataLoader(

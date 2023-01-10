@@ -18,13 +18,7 @@ from pytorch_lightning.loggers import WandbLogger
 time_ = datetime.now() + timedelta(hours=9)
 time_now = time_.strftime("%m%d%H%M")
 
-wandb_dict = {
-    "gwkim_22": "f631be718175f02da4e2f651225fadb8541b3cd9",
-    "rion_": "0d57da7f9222522c1a3dbb645a622000e0344d36",
-    "daniel0801": "b8c4d92272716adcb1b2df6597cfba448854ff90",
-    "seokhee": "c79d118b300d6cff52a644b8ae6ab0933723a59f",
-    "dk100": "263b9353ecef00e35bdf063a51a82183544958cc",
-}
+wandb_dict = {"User": "asd"}
 
 if __name__ == "__main__":
     # 하이퍼 파라미터 등 각종 설정값을 입력받습니다
@@ -84,7 +78,7 @@ if __name__ == "__main__":
         logger=wandb_logger,  # W&B integration
         callbacks=[earlystopping, checkpoint_callback, RichProgressBar()],
         deterministic=True,
-        resume_from_checkpoint='/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=0_val_em=80.61.ckpt'
+        resume_from_checkpoint="/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=0_val_em=80.61.ckpt"
         # limit_train_batches=0.15,  # use only 15% of training data
         # limit_val_batches = 0.01, # use only 1% of val data
         # limit_train_batches=0.01    # use only 10 batches of training data

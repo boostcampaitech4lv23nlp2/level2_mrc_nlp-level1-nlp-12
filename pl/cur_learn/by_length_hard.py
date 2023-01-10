@@ -2,6 +2,7 @@ import argparse
 import os
 import re
 import sys
+
 sys.path.append("/opt/ml/input/code/pl")
 from datetime import datetime, timedelta
 
@@ -85,7 +86,7 @@ if __name__ == "__main__":
         logger=wandb_logger,  # W&B integration
         callbacks=[earlystopping, checkpoint_callback, RichProgressBar()],
         deterministic=True,
-        resume_from_checkpoint='/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=3_val_em=65.00.ckpt'
+        resume_from_checkpoint="/opt/ml/input/code/pl/checkpoint/klue_roberta-large/epoch=3_val_em=65.00.ckpt"
         # limit_train_batches=0.15,  # use only 15% of training data
         # limit_val_batches = 0.01, # use only 1% of val data
         # limit_train_batches=0.01    # use only 10 batches of training data

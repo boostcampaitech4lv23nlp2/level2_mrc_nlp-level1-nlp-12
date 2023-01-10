@@ -2,6 +2,7 @@ import argparse
 import os
 import re
 import sys
+
 sys.path.append("/opt/ml/input/code/pl")
 from datetime import datetime, timedelta
 
@@ -91,7 +92,7 @@ if __name__ == "__main__":
     )
 
     trainer.fit(model=model, datamodule=dataloader)
-    #trainer.test(model=model, datamodule=dataloader, ckpt_path="best")
+    # trainer.test(model=model, datamodule=dataloader, ckpt_path="best")
     # 학습이 완료된 모델을 저장합니다.
     output_dir_path = "output"
     if not os.path.exists(output_dir_path):

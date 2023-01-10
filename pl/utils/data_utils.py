@@ -1,4 +1,6 @@
 import collections
+import json
+import os
 
 from typing import Any, Tuple
 
@@ -6,21 +8,13 @@ import numpy as np
 import pandas as pd
 import torch
 import transformers
-import os
-import json
-from datasets import (
-    Dataset,
-    DatasetDict,
-    Features,
-    Sequence,
-    Value,
-    load_from_disk,
-)
-from tqdm.auto import tqdm
-from transformers import EvalPrediction
+
+from datasets import Dataset, DatasetDict, Features, Sequence, Value, load_from_disk
 from retrievals.base_retrieval import SparseRetrieval
 from retrievals.BM25 import BM25
 from retrievals.elastic_retrieval import ElasticRetrieval
+from tqdm.auto import tqdm
+from transformers import EvalPrediction
 
 def prepare_train_features(examples, tokenizer):
     # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
@@ -138,11 +132,11 @@ def postprocess_qa_predictions(
     features,
     id,
     predictions: Tuple[np.ndarray, np.ndarray],
-    output_dir = None,
+    output_dir=None,
     version_2_with_negative: bool = False,
     n_best_size: int = 20,
     max_answer_length: int = 30,
-    mode = 'eval',
+    mode="eval",
     null_score_diff_threshold: float = 0.0,
 ):
     """
@@ -235,8 +229,8 @@ def postprocess_qa_predictions(
                     if (
                         start_index >= len(offset_mapping)
                         or end_index >= len(offset_mapping)
-                        or offset_mapping[start_index] == [0, 0] 
-                        or  offset_mapping[end_index] == [0, 0]
+                        or offset_mapping[start_index] == [0, 0]
+                        or offset_mapping[end_index] == [0, 0]
                     ):
                         continue
                     # 길이가 < 0 또는 > max_answer_length인 answer도 고려하지 않습니다.
@@ -284,12 +278,12 @@ def postprocess_qa_predictions(
             predictions.insert(0, {"text": "empty", "start_logit": 0.0, "end_logit": 0.0, "score": 0.0})
 
         # 모든 점수의 소프트맥스를 계산합니다(we do it with numpy to stay independent from torch/tf in this file, using the LogSumExp trick).
-        if mode == 'predict':
+        if mode == "predict":
             scores = torch.tensor([pred.pop("score") for pred in predictions])
             exp_scores = torch.exp(scores - torch.max(scores))
             probs = exp_scores / exp_scores.sum()
 
-        # # # # 예측값에 확률을 포함합니다.
+            # # # # 예측값에 확률을 포함합니다.
             for prob, pred in zip(probs, predictions):
                 pred["probability"] = prob
 
@@ -316,16 +310,14 @@ def postprocess_qa_predictions(
             {k: (float(v) if isinstance(v, (np.float16, np.float32, np.float64)) else v) for k, v in pred.items()}
             for pred in predictions
         ]
-    if mode == 'predict':
-        output_dir = '/opt/ml/input/code/predictions'
+    if mode == "predict":
+        output_dir = "/opt/ml/input/code/predictions"
         prediction_file = os.path.join(
             output_dir,
             "predictions.json",
         )
         with open(prediction_file, "w", encoding="utf-8") as writer:
-            writer.write(
-                json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n"
-            )
+            writer.write(json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n")
     return all_predictions
 
 
@@ -333,7 +325,7 @@ def post_processing_function(id, predictions, tokenizer, mode, path, retrieval):
     # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
     if mode == "eval":
         examples = load_from_disk(path)
-        examples = examples['validation']
+        examples = examples["validation"]
         features = examples.map(
             prepare_validation_features,
             batched=True,
@@ -343,13 +335,11 @@ def post_processing_function(id, predictions, tokenizer, mode, path, retrieval):
         )
     else:
         examples = load_from_disk(path)
-        examples = run_sparse_retrieval(tokenize_fn = tokenizer.tokenize, 
-                                        datasets = examples, 
-                                        mode = 'predict', 
-                                        use_faiss = False,
-                                        retrieval = retrieval)
-        column_names = examples['validation'].column_names
-        examples = examples['validation']
+        examples = run_sparse_retrieval(
+            tokenize_fn=tokenizer.tokenize, datasets=examples, mode="predict", use_faiss=False, retrieval=retrieval
+        )
+        column_names = examples["validation"].column_names
+        examples = examples["validation"]
         features = examples.map(
             prepare_validation_features,
             batched=True,
@@ -374,6 +364,7 @@ def post_processing_function(id, predictions, tokenizer, mode, path, retrieval):
         references = [{"id": ex["id"], "answers": ex["answers"]} for ex in examples]
         return EvalPrediction(predictions=formatted_predictions, label_ids=references)
 
+
 def run_ensemble_retrieval(
     tokenize_fn,
     datasets,
@@ -384,7 +375,7 @@ def run_ensemble_retrieval(
 ):
 
     # Query에 맞는 Passage들을 Retrieval 합니다.
-    retriever_ela = ElasticRetrieval('origin_wiki')
+    retriever_ela = ElasticRetrieval("origin_wiki")
     retriever_tf = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
     retriever_BM = BM25(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
 
@@ -397,16 +388,16 @@ def run_ensemble_retrieval(
 
     # df_BM.drop(columns = ['context_id','__index_level_0__'], inplace=True)
     # df_ela.drop(columns = ['context_id','__index_level_0__'], inplace=True)
-    
-    df_ela.to_csv('df_ela.csv',index=False)
-    df_BM.to_csv('df_BM.csv',index=False)
-    df_tf.to_csv('df_tf.csv',index=False)
-    
+
+    df_ela.to_csv("df_ela.csv", index=False)
+    df_BM.to_csv("df_BM.csv", index=False)
+    df_tf.to_csv("df_tf.csv", index=False)
+
     # df_ela = df_ela.merge(df_tf,how='outer')
     # df = df_ela.merge(df_BM, how='outer')
 
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
-    if mode=='predict':
+    if mode == "predict":
         f = Features(
             {
                 "context": Value(dtype="string", id=None),
@@ -416,7 +407,7 @@ def run_ensemble_retrieval(
         )
 
     # train data 에 대해선 정답이 존재하므로 id question context answer 로 데이터셋이 구성됩니다.
-    elif mode == 'eval':
+    elif mode == "eval":
         f = Features(
             {
                 "answers": Sequence(
@@ -436,6 +427,7 @@ def run_ensemble_retrieval(
     datasets.save_to_disk("data_en_re")
     return datasets
 
+
 def run_sparse_retrieval(
     tokenize_fn,
     datasets,
@@ -448,7 +440,7 @@ def run_sparse_retrieval(
 
     # Query에 맞는 Passage들을 Retrieval 합니다.
     if retrieval == "elastic":
-        retriever = ElasticRetrieval('origin_wiki')
+        retriever = ElasticRetrieval("origin_wiki")
     else:
         if retrieval == "tf_idf":
             retriever = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
@@ -458,14 +450,12 @@ def run_sparse_retrieval(
 
     if use_faiss:
         retriever.build_faiss(num_clusters=64)
-        df = retriever.retrieve_faiss(
-            datasets["validation"], topk=40
-        )
+        df = retriever.retrieve_faiss(datasets["validation"], topk=40)
     else:
         df = retriever.retrieve(datasets["validation"], topk=40)
-    df.drop(columns = ['context_id'], inplace=True)
+    df.drop(columns=["context_id"], inplace=True)
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
-    if mode=='predict':
+    if mode == "predict":
         f = Features(
             {
                 "context": Value(dtype="string", id=None),
@@ -475,7 +465,7 @@ def run_sparse_retrieval(
         )
 
     # train data 에 대해선 정답이 존재하므로 id question context answer 로 데이터셋이 구성됩니다.
-    elif mode == 'eval':
+    elif mode == "eval":
         f = Features(
             {
                 "answers": Sequence(

@@ -19,11 +19,7 @@ time_ = datetime.now() + timedelta(hours=9)
 time_now = time_.strftime("%m%d%H%M")
 
 wandb_dict = {
-    "gwkim_22": "f631be718175f02da4e2f651225fadb8541b3cd9",
-    "rion_": "0d57da7f9222522c1a3dbb645a622000e0344d36",
-    "daniel0801": "b8c4d92272716adcb1b2df6597cfba448854ff90",
-    "seokhee": "c79d118b300d6cff52a644b8ae6ab0933723a59f",
-    "dk100": "263b9353ecef00e35bdf063a51a82183544958cc",
+    "user": 'asdf'
 }
 
 if __name__ == "__main__":
@@ -103,7 +99,7 @@ if __name__ == "__main__":
     sweep_id = wandb.sweep(
         sweep=sweep_config,  # config 딕셔너리를 추가합니다.
         project=cfg.wandb.wandb_project,  # project의 이름을 추가합니다.
-        entity = cfg.wandb.wandb_entity
+        entity=cfg.wandb.wandb_entity,
     )
     wandb.agent(
         sweep_id=sweep_id,  # sweep의 정보를 입력하고
