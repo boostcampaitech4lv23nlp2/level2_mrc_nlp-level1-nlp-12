@@ -24,7 +24,7 @@ class SparseRetrieval:
     def __init__(
         self,
         tokenize_fn,
-        data_path: Optional[str] = "../data/",
+        data_path: Optional[str] = "/opt/ml/input/data/",
         context_path: Optional[str] = "wikipedia_documents.json",
     ):
 
@@ -187,9 +187,9 @@ class SparseRetrieval:
                     "question": example["question"],
                     "id": example["id"],
                     # Retrieve한 Passage의 id, context를 반환합니다.
-                    "context": " ".join(
+                    "context": 
                         [self.contexts[pid] for pid in doc_indices[idx]]
-                    ),
+                    
                 }
                 if "context" in example.keys() and "answers" in example.keys():
                     # validation 데이터를 사용하면 ground_truth context와 answer도 반환합니다.
@@ -383,7 +383,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="")
     parser.add_argument(
-        "--dataset_name", metavar="./data/train_dataset", type=str, help=""
+        "--dataset_name", metavar="/opt/ml/input/data/train_dataset", type=str, help=""
     )
     parser.add_argument(
         "--model_name_or_path",
@@ -391,7 +391,7 @@ if __name__ == "__main__":
         type=str,
         help="",
     )
-    parser.add_argument("--data_path", metavar="./data", type=str, help="")
+    parser.add_argument("--data_path", metavar="/opt/ml/input/data", type=str, help="")
     parser.add_argument(
         "--context_path", metavar="wikipedia_documents", type=str, help=""
     )

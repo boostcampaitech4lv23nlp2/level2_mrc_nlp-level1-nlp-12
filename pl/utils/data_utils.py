@@ -3,6 +3,7 @@ import collections
 from typing import Any, Tuple
 
 import numpy as np
+import pandas as pd
 import torch
 import transformers
 import os
@@ -372,6 +373,68 @@ def post_processing_function(id, predictions, tokenizer, mode, path, retrieval):
     elif mode == "eval":
         references = [{"id": ex["id"], "answers": ex["answers"]} for ex in examples]
         return EvalPrediction(predictions=formatted_predictions, label_ids=references)
+
+def run_ensemble_retrieval(
+    tokenize_fn,
+    datasets,
+    mode,
+    use_faiss,
+    data_path: str = "../../data",
+    context_path: str = "wikipedia_documents.json",
+):
+
+    # Query에 맞는 Passage들을 Retrieval 합니다.
+    retriever_ela = ElasticRetrieval('origin_wiki')
+    retriever_tf = SparseRetrieval(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+    retriever_BM = BM25(tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path)
+
+    retriever_tf.get_sparse_embedding()
+    retriever_BM.get_sparse_embedding()
+
+    df_ela = retriever_ela.retrieve(datasets["validation"], topk=40)
+    df_tf = retriever_tf.retrieve(datasets["validation"], topk=40)
+    df_BM = retriever_BM.retrieve(datasets["validation"], topk=40)
+
+    # df_BM.drop(columns = ['context_id','__index_level_0__'], inplace=True)
+    # df_ela.drop(columns = ['context_id','__index_level_0__'], inplace=True)
+    
+    df_ela.to_csv('df_ela.csv',index=False)
+    df_BM.to_csv('df_BM.csv',index=False)
+    df_tf.to_csv('df_tf.csv',index=False)
+    
+    # df_ela = df_ela.merge(df_tf,how='outer')
+    # df = df_ela.merge(df_BM, how='outer')
+
+    # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
+    if mode=='predict':
+        f = Features(
+            {
+                "context": Value(dtype="string", id=None),
+                "id": Value(dtype="string", id=None),
+                "question": Value(dtype="string", id=None),
+            }
+        )
+
+    # train data 에 대해선 정답이 존재하므로 id question context answer 로 데이터셋이 구성됩니다.
+    elif mode == 'eval':
+        f = Features(
+            {
+                "answers": Sequence(
+                    feature={
+                        "text": Value(dtype="string", id=None),
+                        "answer_start": Value(dtype="int32", id=None),
+                    },
+                    length=-1,
+                    id=None,
+                ),
+                "context": Value(dtype="string", id=None),
+                "id": Value(dtype="string", id=None),
+                "question": Value(dtype="string", id=None),
+            }
+        )
+    datasets = DatasetDict({"validation": Dataset.from_pandas(df, features=f)})
+    datasets.save_to_disk("data_en_re")
+    return datasets
 
 def run_sparse_retrieval(
     tokenize_fn,
