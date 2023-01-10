@@ -1,105 +1,108 @@
 import sys
+
 from importlib import import_module
 
 sys.path.append("/opt/ml/input/code/pl")
+
+from itertools import chain
+
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import transformers
 
-from utils import (criterion_entrypoint, klue_re_auprc, klue_re_micro_f1,
-                   n_compute_metrics)
-
+from datasets import load_from_disk
+from utils.data_utils import *
+from utils.util import compute_metrics, criterion_entrypoint
 
 class Model(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.save_hyperparameters()
-
+        self.cfg = config
         self.model_name = config.model.model_name
-        self.lr = config.train.learning_rate
-        self.lr_sch_use = config.train.lr_sch_use
-        self.lr_decay_step = config.train.lr_decay_step
-        self.scheduler_name = config.train.scheduler_name
-        self.lr_weight_decay = config.train.lr_weight_decay
+        self.lr = config.optimizer.learning_rate
+        self.lr_sch_use = config.optimizer.lr_sch_use
+        self.lr_decay_step = config.optimizer.lr_decay_step
+        self.scheduler_name = config.optimizer.scheduler_name
+        self.lr_weight_decay = config.optimizer.lr_weight_decay
 
         # 사용할 모델을 호출합니다.
-        self.plm = transformers.AutoModelForSequenceClassification.from_pretrained(
-            pretrained_model_name_or_path=self.model_name, num_labels=30
+        self.plm = transformers.AutoModelForQuestionAnswering.from_pretrained(
+            pretrained_model_name_or_path=self.model_name
         )
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name, max_length=200)
         # Loss 계산을 위해 사용될 CE Loss를 호출합니다.
-        self.loss_func = criterion_entrypoint(config.train.loss_name)
-        self.optimizer_name = config.train.optimizer_name
+        self.loss_func = criterion_entrypoint(config.loss.loss_name)
+        self.optimizer_name = config.optimizer.optimizer_name
+
+        self.eval_example = load_from_disk(config.path.train_path)["validation"]
+        self.predict_example = load_from_disk(config.path.test_path)["validation"]
 
     def forward(self, x):
         x = self.plm(
             input_ids=x["input_ids"],
             attention_mask=x["attention_mask"],
-            token_type_ids=x["token_type_ids"],
+            # token_type_ids=x["token_type_ids"],
         )
-        return x["logits"]
+        return x["start_logits"], x["end_logits"]
 
-    def training_step(self, batch, batch_idx):
-        x = batch
-        y = batch["labels"]
+    def training_step(self, batch):
 
-        logits = self(x)
-        loss = self.loss_func(logits, y.long())
+        start_logits, end_logits = self(batch)
+        s_position, e_position = batch["start_positions"], batch["end_positions"]
 
-        f1, accuracy = n_compute_metrics(logits, y).values()
-        self.log("train", {"loss": loss, "f1": f1, "accuracy": accuracy})
+        l_s = self.loss_func(start_logits, s_position)
+        l_e = self.loss_func(end_logits, e_position)
+
+        loss = (l_s + l_e) / 2
+        self.log("train_loss", loss)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x = batch
-        y = batch["labels"]
+        data, id = batch
+        start_logits, end_logits = self(data)
 
-        logits = self(x)
-        loss = self.loss_func(logits, y.long())
-
-        f1, accuracy = n_compute_metrics(logits, y).values()
-        self.log("val_loss", loss)
-        self.log("val_accuracy", accuracy)
-        self.log("val_f1", f1, on_step=True)
-
-        return {"logits": logits, "y": y}
+        return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
 
     def validation_epoch_end(self, outputs):
-        logits = torch.cat([x["logits"] for x in outputs])
-        y = torch.cat([x["y"] for x in outputs])
+        start_logits = torch.cat([x["start_logits"] for x in outputs])
+        end_logits = torch.cat([x["end_logits"] for x in outputs])
+        predictions = (start_logits, end_logits)
 
-        logits = logits.detach().cpu().numpy()
-        y = y.detach().cpu()
+        ids = [x["id"] for x in outputs]
+        id = list(chain(*ids))
 
-        auprc = klue_re_auprc(logits, y)
-        self.log("val_auprc", auprc)
+        preds = post_processing_function(id, predictions, self.tokenizer, "eval", self.cfg.path.train_path)
+        result = compute_metrics(preds)
+        self.log("val_em", result["exact_match"])
+        self.log("val_f1", result["f1"])
 
     def test_step(self, batch, batch_idx):
-        x = batch
-        y = batch["labels"]
+        data, id = batch
+        start_logits, end_logits = self(data)
 
-        logits = self(x)
-
-        f1, accuracy = n_compute_metrics(logits, y).values()
-        self.log("test_f1", f1)
-
-        return {"logits": logits, "y": y}
+        return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
 
     def test_epoch_end(self, outputs):
-        logits = torch.cat([x["logits"] for x in outputs])
-        y = torch.cat([x["y"] for x in outputs])
+        start_logits = torch.cat([x["start_logits"] for x in outputs])
+        end_logits = torch.cat([x["end_logits"] for x in outputs])
+        predictions = (start_logits, end_logits)
 
-        logits = logits.detach().cpu().numpy()
-        y = y.detach().cpu()
+        ids = [x["id"] for x in outputs]
+        id = list(chain(*ids))
 
-        auprc = klue_re_auprc(logits, y)
-        self.log("test_auprc", auprc)
+        preds = post_processing_function(id, predictions, self.tokenizer, "eval", self.cfg.path.train_path)
+        result = compute_metrics(preds)
+        self.log("test_em", result["exact_match"])
+        self.log("test_f1", result["f1"])
 
     def predict_step(self, batch, batch_idx):
-        logits = self(batch)
+        data, id = batch
+        start_logits, end_logits = self(data)
 
-        return logits
+        return {"start_logits": start_logits, "end_logits": end_logits, "id": id}
 
     def configure_optimizers(self):
         opt_module = getattr(import_module("torch.optim"), self.optimizer_name)
@@ -110,28 +113,16 @@ class Model(pl.LightningModule):
                 weight_decay=0.01,
             )
         else:
-            optimizer = opt_module(
-                filter(lambda p: p.requires_grad, self.parameters()),
-                lr=self.lr,
-                # weight_decay=5e-4
-            )
+            optimizer = opt_module(filter(lambda p: p.requires_grad, self.parameters()), lr=self.lr)
         if self.lr_sch_use:
             t_total = 2030 * 7  # train_dataloader len, epochs
             warmup_step = int(t_total * 0.1)
 
             _scheduler_dic = {
-                "StepLR": torch.optim.lr_scheduler.StepLR(
-                    optimizer, self.lr_decay_step, gamma=0.5
-                ),
-                "ReduceLROnPlateau": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                    optimizer, factor=0.1, patience=10
-                ),
-                "CosineAnnealingLR": torch.optim.lr_scheduler.CosineAnnealingLR(
-                    optimizer, T_max=2, eta_min=0.0
-                ),
-                "constant_warmup": transformers.get_constant_schedule_with_warmup(
-                    optimizer, 100
-                ),
+                "StepLR": torch.optim.lr_scheduler.StepLR(optimizer, self.lr_decay_step, gamma=0.5),
+                "ReduceLROnPlateau": torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=10),
+                "CosineAnnealingLR": torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=2, eta_min=0.0),
+                "constant_warmup": transformers.get_constant_schedule_with_warmup(optimizer, 100),
                 "cosine_warmup": transformers.get_cosine_schedule_with_warmup(
                     optimizer, num_warmup_steps=10, num_training_steps=t_total
                 ),

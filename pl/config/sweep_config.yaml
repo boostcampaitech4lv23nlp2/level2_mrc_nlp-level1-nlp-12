@@ -1,15 +1,14 @@
 path:
     train_path: /opt/ml/input/data/train_dataset/
     test_path: /opt/ml/input/data/test_dataset/
-    output_path: /opt/ml/input/code/predictions
 
 data:
     shuffle: True
     augmentation: # adea, bt 등등
     
 model:
-    model_name: klue/roberta-large
-    saved_name: base
+    model_name: klue/roberta-small
+    saved_name: roberta-small
 
 train:
     seed: 42
@@ -19,7 +18,7 @@ train:
     logging_step: 1
     
 optimizer:
-    learning_rate: 0.000048666899101127755
+    learning_rate: 1e-5
     optimizer_name: AdamW
     lr_weight_decay: False
     lr_decay_step: 20
@@ -33,9 +32,14 @@ fold:
     fold: False
     nums_folds: 5
 
+sweep:
+    method: bayes
+    lr_min: 1e-6
+    lr_max: 1e-4
+    name: klue/roberta-large
+    count: 5
+
 wandb:
-    wandb_username: seokhee
+    wandb_username: daniel0801
     wandb_project: mrc_temp
     wandb_entity: mrc_et
-
-retrieval: elastic # elastic, tf_idf, bm25

@@ -1,3 +1,10 @@
+wandb
+outputs
+models
+config
+
+checkpoint
+
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,python
 
@@ -9,7 +16,13 @@ __pycache__/
 
 # C extensions
 *.so
-
+outputs
+wandb
+nohup.out
+arrow_to_csv.ipynb
+re_temp
+mrc_temp
+cur_lern.ipynb
 # Distribution / packaging
 .Python
 build/
@@ -184,8 +197,7 @@ cython_debug/
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
 
-base_code/
-dataset/
+base/
 pl/output/
 pl/re/
 test.ipynb
@@ -198,3 +210,28 @@ pl/config/electra_label_yong.yaml
 pl/ensemble/
 pl/inference_results/
 pl/lightning_logs/
+pl/wandb/
+mlruns/
+pl/MLProject
+pl/config/external_data_config.yaml
+pl/config/noun_adj_config.yaml
+pl/environment.yaml
+pl/hugging.py
+pl/mlruns/
+pl/config/
+predictions/
+
+pl/retrievals/BM25.py
+pl/retrievals/base_retrieval.py
+pl/retrievals/elastic_retrieval.py
+pl/utils/data_utils.py
+EDA/incorect_df.csv
+pl/datamodule/en_data.py
+pl/df_BM.csv
+pl/df_BM_1.csv
+pl/df_ela.csv
+pl/df_ela_1.csv
+pl/df_tf.csv
+pl/df_tf_1.csv
+pl/em.py
+pl/merge.ipynb
